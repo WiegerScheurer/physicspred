@@ -1,0 +1,4 @@
+trial,interactor,bounce,bounce_moment,random_bounce_direction,target_onset,speed_change,hue_change,abs_congruent,sim_congruent,response,accuracy,rt,start_pos,end_pos,abs_rftop,abs_rfright,abs_rfdown,abs_rfleft,sim_rftop,sim_rfright,sim_rfdown,sim_rfleft
+1,45,False,4.6325657916022465,left,5.315947511507794,faster,False,,,,,,down,up,,,,,,,,
+2,45,True,4.50105425005313,left,4.839981817033983,slower,False,,,,,,top,left,,,,,,,,
+3,45,False,4.656524250051007,right,4.874213865527286,slower,False,,,,,,top,down,,,,,,,,

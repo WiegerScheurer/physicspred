@@ -2,16 +2,47 @@ from psychopy import visual, core, event
 import numpy as np
 import random
 import math
+import pandas as pd
+from datetime import datetime
+import os
+import sys
+
+sys.path.append("/Users/wiegerscheurer/repos/physicspred") # To enable importing from repository folders
+
+from functions.utilities import setup_folders, save_performance_data
+from functions.physics import check_collision, collide, velocity_to_direction, predict_ball_path
 
 win_dims = [1000, 1000]
 ball_speed = 5
 verbose = False
 
-# Create objects to store performance in
+exp_data = {
+    "trial": [],
+    "interactor": [],
+    "bounce": [],
+    "bounce_moment": [],
+    "random_bounce_direction": [],
+    "target_onset": [],
+    "speed_change": [],
+    "hue_change": [],
+    "abs_congruent": [],
+    "sim_congruent": [],
+    "response": [],
+    "accuracy": [],
+    "rt": [],
+    "start_pos": [],
+    "end_pos": [],
+    "abs_rftop": [],
+    "abs_rfright": [],
+    "abs_rfdown": [],
+    "abs_rfleft": [],
+    "sim_rftop": [],
+    "sim_rfright": [],
+    "sim_rfdown": [],
+    "sim_rfleft": []
+}
 
-
-
-
+    
 # Setup the window
 win = visual.Window(win_dims, color='black', units='pix', fullscr=False)
 
@@ -25,62 +56,18 @@ occluder = visual.Circle(win, radius=100, fillColor='grey', lineColor='grey', po
 ball = visual.Circle(win, radius=40, fillColor='white', lineColor='white')
 
 # Define trial conditions
-trial_conditions = ["45", "135", "none"] * 10
+# trial_conditions = ["45", "135", "none"] * 10
+# trial_conditions = ["45", "135", "none"] * 1
+trial_conditions = ["45", "45", "45"] * 1
 random.shuffle(trial_conditions)
 
 # Possible starting positions and movement directions
 start_positions = {
-    "top": (0, win_dims[0]//2), "bottom": (0, -win_dims[0]//2), "left": (-win_dims[1]//2, 0), "right": (win_dims[1]//2, 0)
+    "top": (0, win_dims[0]//2), "down": (0, -win_dims[0]//2), "left": (-win_dims[1]//2, 0), "right": (win_dims[1]//2, 0)
 }
 directions = {
-    "top": (0, -ball_speed), "bottom": (0, ball_speed), "left": (ball_speed, 0), "right": (-ball_speed, 0)
+    "top": (0, -ball_speed), "down": (0, ball_speed), "left": (ball_speed, 0), "right": (-ball_speed, 0)
 }
-
-def check_collision(ball_pos, line_angle):
-    """Returns True if the ball's edge intersects the diagonal line."""
-    x, y = ball_pos
-    if line_angle == "45":  
-        return abs(y - x) <= ball.radius  # Ball touches y = x
-    elif line_angle == "135":
-        return abs(y + x) <= ball.radius  # Ball touches y = -x
-    return False  # No line
-
-def collide(start_direction: str, line_angle: int):
-    """Returns the new direction vector of the ball after a collision."""
-    direction_angles = {
-        "top": 270,
-        "bottom": 90,
-        "left": 0,
-        "right": 180
-    }
-    
-    # Get the initial angle of the ball's movement
-    initial_angle = direction_angles[start_direction]
-
-    # Calculate the angle of incidence
-    if line_angle in [45, 135]:
-        normal_angle = line_angle
-    else:
-        return start_direction
-    
-    # Calculate the angle of reflection
-    angle_of_reflection = (2 * normal_angle - initial_angle) % 360
-    
-    # Convert the angle of reflection back to a direction vector
-    new_direction = (
-        math.cos(math.radians(angle_of_reflection)) * ball_speed,
-        math.sin(math.radians(angle_of_reflection)) * ball_speed
-    )
-    
-    return new_direction
-
-def velocity_to_direction(velocity):
-    """Converts a velocity vector to a direction string."""
-    x, y = velocity
-    if abs(x) > abs(y):
-        return "left" if x < 0 else "right"
-    else:
-        return "down" if y < 0 else "up"  # Vertical axis is inverted
 
 # Define the start and end colors for the subtle change
 start_color = np.array([1.0, 1.0, 1.0])  # White
@@ -148,19 +135,46 @@ for trial in trial_conditions:
     hue_change = random.random() < .25 #0.2  # 20% probability
     feedback_text = ""
 
+ 
+    # Store trial characteristics
+    exp_data["trial"].append(len(exp_data["trial"]) + 1)
+    exp_data["interactor"].append(trial)
+    exp_data["bounce"].append(bounce) # Whether the ball will bounce (IMPORTANT TO HAVE IT HERE, as it will change after the bounce) it's like imperative
+    exp_data["bounce_moment"].append(None)  # Placeholder for bounce moment
+    exp_data["random_bounce_direction"].append(rand_bounce_direction)
+    exp_data["target_onset"].append(None) # Cannot be done, until the moment of the change is known
+    exp_data["speed_change"].append(rand_speed_change)
+    exp_data["hue_change"].append(hue_change)
+    exp_data["abs_congruent"].append(None)  # Placeholder for abstraction prediction congruency
+    exp_data["sim_congruent"].append(None)  # Placeholder for simulated prediction congruency
+    exp_data["response"].append(None)  # Placeholder for response
+    exp_data["accuracy"].append(None)  # Placeholder for accuracy
+    exp_data["rt"].append(None)  # Placeholder for reaction time
+    exp_data["start_pos"].append(edge)
+    exp_data["end_pos"].append(None)  # Placeholder for end position
+    exp_data["abs_rftop"].append(None)  # Placeholder for absolute RF top
+    exp_data["abs_rfright"].append(None)  # Placeholder for absolute RF right
+    exp_data["abs_rfdown"].append(None)  # Placeholder for absolute RF down
+    exp_data["abs_rfleft"].append(None)  # Placeholder for absolute RF left
+    exp_data["sim_rftop"].append(None)  # Placeholder for simulated RF top
+    exp_data["sim_rfright"].append(None)  # Placeholder for simulated RF right
+    exp_data["sim_rfdown"].append(None)  # Placeholder for simulated RF down
+    exp_data["sim_rfleft"].append(None)  # Placeholder for simulated RF left
+    
+
     # **BALL MOVEMENT LOOP**
     while trial_clock.getTime() < trial_duration:  # Move until 6 seconds (scaled for window size)
         ball.pos += velocity  # Update ball position
         if trial_clock.getTime() % .5 < 0.02 and verbose:
             print(f"Ball direction: {velocity_to_direction(velocity)}")
         # Check for bounce
-        if bounce and check_collision(ball.pos, trial):
+        if bounce and check_collision(ball.pos, trial, ball):
             if trial == "45":
                 print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
-                velocity = collide(edge, 45)  # Reflect off 45°
+                velocity = collide(edge, 45, ball_speed)  # Reflect off 45°
             elif trial == "135":
                 print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
-                velocity = collide(edge, 135)  # Reflect off 135°
+                velocity = collide(edge, 135, ball_speed)  # Reflect off 135°
             bounce = False  # Prevent double bouncing
             crossed_fixation = True
         
@@ -180,17 +194,19 @@ for trial in trial_conditions:
                 elif rand_bounce_direction == "right":
                     print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
                     velocity = np.array([velocity[1], velocity[0]])  # Reflect off 135°
+            
             bounce = False
             crossed_fixation = True
 
-        if bounce == False:
+        if bounce == False: # If the ball has bounced, or won't bounce at all (for continuation)
             if bounce_moment == None and crossed_fixation:
                 # print(f"BOUNCE_MOMENT: {trial_clock.getTime()}")
                 print(f"HUE_CHANGE_MOMENT: {trial_clock.getTime() + hue_change_delay}") if verbose else None
                 bounce_moment = trial_clock.getTime()
                 
                 hue_change_moment = bounce_moment + hue_change_delay
-                
+                exp_data["bounce_moment"][-1] = bounce_moment
+                exp_data["target_onset"][-1] = hue_change_moment
             if bounce_moment != None:
                 if trial_clock.getTime() > hue_change_moment:
                     elapsed_time = trial_clock.getTime() - hue_change_moment
@@ -212,6 +228,9 @@ for trial in trial_conditions:
                         
         toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down'])
         ball_direction = velocity_to_direction(velocity)
+        
+        exp_data["end_pos"][-1] = ball_direction # log end position
+        
         if hue_change:
             if toetsen and bounce_moment != None and correct_response == None:
                 toets_moment = trial_clock.getTime()
@@ -238,6 +257,11 @@ for trial in trial_conditions:
                         feedback_text = f"Wrong, WRONG DIRECTION, should be a {hue_or_speed} change in {ball_direction} direction"
                         print(f"Wrong, WRONG DIRECTION, should be {ball_direction}")
                         correct_response = False
+                        
+            exp_data["accuracy"][-1] = correct_response
+            exp_data["response"][-1] = toetsen[0] if toetsen else None
+            exp_data["rt"][-1] = toets_moment - hue_change_moment if toetsen else None
+
         else:
             if toetsen != []:
                 print(f"Wrong, there was no change")
@@ -264,8 +288,28 @@ for trial in trial_conditions:
         core.quit()
     elif 'r' in keys:
         continue  # Skip to the next trial        
+    
+    # Figure out how to fill in the RF specific values
+    if trial == "none":
+        exp_data["abs_congruent"][-1] = 1 if exp_data["bounce"] != None else 0
+        exp_data["sim_congruent"][-1] = 1 if exp_data["bounce"] != None else 0
 
+    # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
+    for hypothesis in ["abs", "sim"]:
+        pred_to_input = predict_ball_path(hypothesis=hypothesis, interactor=trial, start_pos=edge, end_pos=exp_data["end_pos"][-1], plot=False)
+        for location in pred_to_input.keys():
+            exp_data[f"{hypothesis}_rf{location}"] = pred_to_input[location]
+            
+    # TODO: ADD FUNCTION TO CHECK WHETHER THERE IS A TUPLE PAIR OF 2, IF SO, THERE IS NO VIOLATION, BECAUSE THIS MEANS PRED AND INPUT AGREE
+    
+    
+    
 win.close()
 
+df = pd.DataFrame(exp_data)
 
 
+# Save the DataFrame to a CSV file
+subject_id = "subject_stront"
+task_name = "task_01"
+save_performance_data(subject_id, task_name, df)
