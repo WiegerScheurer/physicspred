@@ -14,8 +14,8 @@ def check_collision(ball_pos, line_angle, ball):
 def collide(start_direction: str, line_angle: int, ball_speed: float):
     """Returns the new direction vector of the ball after a collision."""
     direction_angles = {
-        "top": 270,
-        "bottom": 90,
+        "up": 270,
+        "down": 90,
         "left": 0,
         "right": 180
     }
@@ -56,7 +56,7 @@ def _dir_to_vec(direction:str) -> tuple:
     Returns:
         tuple: The vector representation in row,column (y,x)
     """    
-    directions = {"top": (1, 0),
+    directions = {"up": (1, 0),
               "right": (0, 1), 
               "down": (-1, 0),
               "left": (0, -1)}
@@ -70,7 +70,7 @@ def _vec_to_dir(vector:tuple) -> str:
     Returns:
         str: The direction string
     """    
-    vectors = {(1, 0): "top",
+    vectors = {(1, 0): "up",
               (0, 1): "right", 
               (-1, 0): "down",
               (0, -1): "left"}
@@ -85,7 +85,7 @@ def _dir_to_loc(direction:str) -> tuple:
     Returns:
         tuple: The location representation in row,column (y,x)
     """    
-    locations = {"top": (0, 1),
+    locations = {"up": (0, 1),
               "right": (1, 2), 
               "down": (2, 1),
               "left": (1, 0)}
@@ -157,7 +157,7 @@ def _bounce_ball(start_direction: str, interactor: str):
         relative_direction = "left" if start_direction in ["right", "left"] else "right"
         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
     elif interactor == "135":
-        relative_direction = "left" if start_direction in ["top", "down"] else "right"
+        relative_direction = "left" if start_direction in ["up", "down"] else "right"
         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
     else:
         end_loc = _dir_to_vec(start_direction) # When no interactor, ball ends up in the same direction
@@ -167,7 +167,7 @@ def _bounce_ball(start_direction: str, interactor: str):
     return _vec_to_dir(end_direction)
 
 def plot_positions(start_pos, end_pos, pred_to_input, interactor):
-    positions = {"top": (0, 1), "right": (1, 0), "down": (0, -1), "left": (-1, 0)}
+    positions = {"up": (0, 1), "right": (1, 0), "down": (0, -1), "left": (-1, 0)}
     
     fig, ax = plt.subplots()
     ax.set_xlim(-1.5, 1.5)
@@ -211,7 +211,7 @@ def predict_ball_path(hypothesis: str, interactor: str, start_pos: str, end_pos:
     Returns:
         dict: A dictionary representing the path of the ball.
     """
-    pred_to_input = {"top": [0],
+    pred_to_input = {"up": [0],
                      "right": [0],
                      "down": [0],
                      "left": [0]}
