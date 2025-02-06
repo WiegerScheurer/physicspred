@@ -10,10 +10,14 @@ import sys
 sys.path.append("/Users/wiegerscheurer/repos/physicspred") # To enable importing from repository folders
 
 from functions.utilities import setup_folders, save_performance_data
-from functions.physics import check_collision, collide, velocity_to_direction, predict_ball_path, _flip_dir
+from functions.physics import check_collision, collide, velocity_to_direction, predict_ball_path, _flip_dir, compute_speed, change_speed, _rotate_90, _dir_to_velocity, velocity_to_direction
 
 win_dims = [1000, 1000]
-ball_speed = 5
+ball_speed = 2.5 # Used to be 5 when refresh rate was 30
+ball_radius = 40 # Used to be 40
+interactor_heigth = 180
+interactor_width = 5
+occluder_radius = 120
 verbose = False
 
 exp_data = {
@@ -47,22 +51,31 @@ exp_data = {
 win = visual.Window(win_dims, color='black', units='pix', fullscr=False)
 
 # Define stimuli
-fixation = visual.TextStim(win, text='+', color='white', pos=(0, 0), height=40)
-line_45 = visual.Line(win, start=(-50, -50), end=(50, 50), lineWidth=5, lineColor='red')
-line_135 = visual.Line(win, start=(-50, 50), end=(50, -50), lineWidth=5, lineColor='red')
-occluder = visual.Circle(win, radius=100, fillColor='grey', lineColor='grey', pos=(0, 0))
+fixation = visual.TextStim(win, text='+', color='white', pos=(0, 0), height=50)
+# line_45 = visual.Line(win, start=(-50, -50), end=(50, 50), lineWidth=interactor_width, lineColor='red')
+# line_135 = visual.Line(win, start=(-50, 50), end=(50, -50), lineWidth=interactor_width, lineColor='red')
+
+# Define a square and rotate it to create a thick line
+line_45 = visual.Rect(win, width=interactor_width, height=interactor_heigth, fillColor='red', lineColor='red')
+line_45.ori = 45  # Rotate the square by 45 degrees
+
+line_135 = visual.Rect(win, width=interactor_width, height=interactor_heigth, fillColor='red', lineColor='red')
+line_135.ori = 135  # 
+occluder = visual.Circle(win, radius=occluder_radius, fillColor='grey', lineColor='grey', pos=(0, 0))
 
 # Define ball
-ball = visual.Circle(win, radius=40, fillColor='white', lineColor='white')
+ball = visual.Circle(win, radius=ball_radius, fillColor='white', lineColor='white')
 
 # Define trial conditions
 # trial_conditions = ["45", "135", "none"] * 10
-trial_conditions = ["45", "135", "none"] * 1
+trial_conditions = ["45", "135", "none"] * 2
+# trial_conditions = ["none", "none", "none"] * 2
 random.shuffle(trial_conditions)
 
+ball_spawn_spread = 1.8  # Margin around fixation where the ball can spawn
 # Possible starting positions and movement directions
 start_positions = {
-    "up": (0, win_dims[0]//2), "down": (0, -win_dims[0]//2), "left": (-win_dims[1]//2, 0), "right": (win_dims[1]//2, 0)
+    "up": (0, win_dims[0]//ball_spawn_spread), "down": (0, -win_dims[0]//ball_spawn_spread), "left": (-win_dims[1]//ball_spawn_spread, 0), "right": (win_dims[1]//ball_spawn_spread, 0)
 }
 directions = {
     "up": (0, -ball_speed), "down": (0, ball_speed), "left": (ball_speed, 0), "right": (-ball_speed, 0)
@@ -103,6 +116,10 @@ if task_choice == 'B':
 for trial in trial_conditions:
     trial_clock = core.Clock()  # Create a clock for the trial
     
+    fixation.draw()
+    win.flip()
+    core.wait(2)  # Fixation display
+    
     if trial == "45":
         line_45.draw()
     elif trial == "135":
@@ -115,7 +132,8 @@ for trial in trial_conditions:
     occluder.draw()
     fixation.draw()
     win.flip()
-    core.wait(0.5)  # Occluder display
+    # core.wait(0.5)  # Occluder display
+    core.wait(1)  # Occluder display
     
     # Ball movement setup
     edge = random.choice(list(start_positions.keys()))
@@ -125,14 +143,20 @@ for trial in trial_conditions:
     rand_bounce_direction = random.choice(["left", "right"])  # Random 90° bounce direction
     rand_speed_change = random.choice(["slower", "faster"])  # 50% chance to slow down or speed up
     # ball_change_delay = random.uniform(0, .8)  # Random delay for hue change
-    ball_change_delay = random.uniform(0, .2)  # Random delay for hue change
+    ball_change_delay = 0 # random.uniform(0, 0)  # Random delay for hue change
     bounce_moment = None
+    bounced_at = None
     correct_response = None
     crossed_fixation = False
-    trial_duration = (win_dims[0]//(800/6))
+    speed_changed = False
+    responded = False
+    left_occluder = False
+    ball_change_moment = None
+    occluder_exit_moment = None
+    trial_duration = (win_dims[0]//(800/10))
     print(f"Trial duration = {trial_duration}") if verbose else None
     # Apply hue change based on selected task
-    ball_change = random.random() < .75 #0.2  # 20% probability
+    ball_change = random.random() < .25 #0.2  # 20% probability
     feedback_text = ""
 
  
@@ -140,7 +164,7 @@ for trial in trial_conditions:
     exp_data["trial"].append(len(exp_data["trial"]) + 1)
     exp_data["interactor"].append(trial)
     exp_data["bounce"].append(bounce) # Whether the ball will bounce (IMPORTANT TO HAVE IT HERE, as it will change after the bounce) it's like imperative
-    exp_data["bounce_moment"].append(None) if bounce else exp_data["bounce_moment"].append(None)
+    exp_data["bounce_moment"].append(None) # if bounce else exp_data["bounce_moment"].append(None) # What?????
     exp_data["random_bounce_direction"].append(rand_bounce_direction) if bounce and trial == "none" else exp_data["random_bounce_direction"].append(None)
     exp_data["target_onset"].append(None) # Cannot be done, until the moment of the change is known
     exp_data["speed_change"].append(rand_speed_change) if ball_change and task_choice == 'B' and ball_change_type == 'S' else exp_data["speed_change"].append(None)
@@ -173,9 +197,13 @@ for trial in trial_conditions:
             if trial == "45":
                 print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
                 velocity = collide(edge, 45, ball_speed)  # Reflect off 45°
+                bounce_moment = trial_clock.getTime()
+
             elif trial == "135":
                 print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
                 velocity = collide(edge, 135, ball_speed)  # Reflect off 135°
+                bounce_moment = trial_clock.getTime()
+
             bounce = False  # Prevent double bouncing
             crossed_fixation = True
         
@@ -184,139 +212,142 @@ for trial in trial_conditions:
         occluder.draw()
         fixation.draw()
         win.flip()
-        core.wait(0.02)  # Smooth animation
+        # core.wait(0.02)  # Smooth animation # I guess 30 hz? I want 60 though
+        core.wait(0.01)  # Smooth animation
+        
 
         # Stop if the ball is near fixation and bounce is True
         if np.linalg.norm(ball.pos) <= 20:
-            if bounce:
+            if bounce and trial == "none":
+                print("DOING FUNKY PHANTOM BOUNCE NOW!!!!!!")
                 if rand_bounce_direction == "left":
-                    print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
-                    velocity = np.array([-velocity[1], -velocity[0]])  # Reflect off 45°
+                    
+                    print(f"BOUNCED LEFT at {trial_clock.getTime()}") if verbose else None
+                    velocity = _dir_to_velocity(_rotate_90(_flip_dir(edge), "left"), ball_speed)  # Reflect off 45°
+                    bounced_at = trial_clock.getTime()
+                    
                 elif rand_bounce_direction == "right":
-                    print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
-                    velocity = np.array([velocity[1], velocity[0]])  # Reflect off 135°
-            
+                    
+                    print(f"BOUNCED RIGHT at {trial_clock.getTime()}") if verbose else None
+                    velocity = _dir_to_velocity(_rotate_90(_flip_dir(edge), "right"), ball_speed)  # Reflect off 135
+                    bounced_at = trial_clock.getTime() # Ugly that this is a double variable, fix at some point
+
             bounce = False
             crossed_fixation = True
-
+            
+        if np.linalg.norm(ball.pos) > (occluder_radius) and crossed_fixation and not left_occluder: # Make sure to start counting after exiting the occluder
+            print(f"occluder exit time: {trial_clock.getTime()}")
+            occluder_exit_moment = trial_clock.getTime()
+            left_occluder = True
+            
         if bounce == False: # If the ball has bounced, or won't bounce at all (for continuation)
-            if bounce_moment == None and crossed_fixation:
-                # print(f"BOUNCE_MOMENT: {trial_clock.getTime()}")
-                print(f"ball_change_MOMENT: {trial_clock.getTime() + ball_change_delay}") if verbose else None
-                bounce_moment = trial_clock.getTime()
-                
-                ball_change_moment = bounce_moment + ball_change_delay
-                # exp_data["bounce_moment"][-1] = bounce_moment if _flip_dir(ball_direction) != edge else None # Check whether the ball hasn't just continued
+            # if bounce_moment == None and crossed_fixation: # If bounce not yet registered, and ball has crossed fixation
+            if crossed_fixation and ball_change_moment == None and left_occluder: # If bounce not yet registered, and ball has crossed fixation
+                # print(f"ball_change_MOMENT: {trial_clock.getTime() + ball_change_delay}") # if verbose else None          
+                print(f"ball_change_MOMENT: {occluder_exit_moment + ball_change_delay}") # if verbose else None          
+                # ball_change_moment = trial_clock.getTime() + ball_change_delay
+                ball_change_moment = occluder_exit_moment + ball_change_delay
                 exp_data["target_onset"][-1] = ball_change_moment if ball_change else None
-            if bounce_moment != None:
-                if trial_clock.getTime() > ball_change_moment:
-                    elapsed_time = trial_clock.getTime() - ball_change_moment
-                    duration = .5  # Duration of the color change in seconds
-                    factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
+                # bounce_moment = trial_clock.getTime()  
+            if bounce_moment != None and ball_change_moment != None:
+                
+                
+                # if trial_clock.getTime() > ball_change_moment: # Necessary? for wahat?
+                elapsed_time = trial_clock.getTime() - ball_change_moment
+                
+                duration = .5  # Duration of the color change in seconds
+                factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
+                
+                if task_choice == 'F' and ball_change:
+                    fixation.color = interpolate_color(start_color, end_color, factor)
                     
-                    if task_choice == 'F' and ball_change:
-                        fixation.color = interpolate_color(start_color, end_color, factor)
-                    elif task_choice == 'B' and ball_change:
-                        if ball_change_type == 'H':
-                            ball.fillColor = interpolate_color(start_color, end_color, factor)
-                            ball.lineColor = interpolate_color(start_color, end_color, factor)
-                        # Make ball velocity slowly decrease
-                        elif ball_change_type == 'S':
-                            if rand_speed_change == "slower" and sum(velocity) > 3:
-                                velocity = tuple(v * (1 - factor / 15) for v in velocity)
-                            elif rand_speed_change == "faster" and sum(velocity) < 8:
-                                velocity = tuple(v * (1 + factor / 15) for v in velocity)
+                elif task_choice == 'B' and ball_change:
+                    if ball_change_type == 'H':
+                        ball.fillColor = interpolate_color(start_color, end_color, factor)
+                        ball.lineColor = interpolate_color(start_color, end_color, factor)
                         
-        toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down'])
-        ball_direction = velocity_to_direction(velocity)
+                    # Make ball velocity slowly decrease
+                    elif ball_change_type == 'S' and not speed_changed:
+
+                        print(f"Current speed: {compute_speed(velocity)}")
+                        ball_direction = velocity_to_direction(velocity)
+
+                        if rand_speed_change == "slower":
+                            velocity = change_speed(compute_speed(velocity), -.75, ball_direction)
+                        elif rand_speed_change == "faster":
+                            velocity = change_speed(compute_speed(velocity), +.75, ball_direction)
+                        print(f"New speed: {compute_speed(velocity)}")
+                        speed_changed = True
         
+        
+        ball_direction = velocity_to_direction(velocity)
+        bounce_moment = bounced_at if bounce_moment == None else bounce_moment
         exp_data["bounce_moment"][-1] = bounce_moment if _flip_dir(ball_direction) != edge else None # Check whether the ball hasn't just continued
         exp_data["end_pos"][-1] = ball_direction # log end position
-        
-        # if ball_change:
-        #     if toetsen and bounce_moment != None and correct_response == None:
-        #         toets_moment = trial_clock.getTime()
-
-        #         if task_choice == 'F' and 'space' in toetsen:
-        #             if toets_moment < ball_change_moment:
-        #                 feedback_text = f"Wrong, TOO EARLY"
-        #                 print(f"Wrong, TOO EARLY")
-        #                 correct_response = False
-        #             else:
-        #                 feedback_text = f"Correct! detected hue change after {round(toets_moment - ball_change_moment, 3)}s"
-        #                 print(f"Correct! detected hue change after {round(toets_moment - ball_change_moment, 3)}s")
-        #                 correct_response = True
-                    
-        #         if task_choice == 'B' and toetsen[0] in ['left', 'right', 'up', 'down']:
-        #             hue_or_speed = "hue" if ball_change_type == 'H' else "speed"
-        #             exp_data["response"][-1] = toetsen[0]
-        #             exp_data["rt"][-1] = toets_moment - ball_change_moment
-        #             if toets_moment < ball_change_moment:
-        #                 feedback_text = f"Wrong, TOO EARLY"
-        #                 print(f"Wrong, TOO EARLY")
-        #                 correct_response = False
-        #             elif ball_direction == toetsen[0]:
-        #                 feedback_text = f"Correct! detected {hue_or_speed} change towards {toetsen[0]} after {round(toets_moment - ball_change_moment, 3)}s"
-        #                 print(f"Correct! detected hue change towards {toetsen[0]} after {round(toets_moment - ball_change_moment, 3)}s")
-        #                 correct_response = True
-        #             else:
-        #                 feedback_text = f"Wrong, WRONG DIRECTION, should be a {hue_or_speed} change in {ball_direction} direction"
-        #                 print(f"Wrong, WRONG DIRECTION, should be {ball_direction}")
-        #                 correct_response = False
-            
-        
-        if toetsen != [] and bounce_moment != None and correct_response == None: # Probleem is dat ik niet zeker weet of er hier een toets is ingedrukt.
-        # if toetsen and bounce_moment != None and correct_response == None: # Probleem is dat ik niet zeker weet of er hier een toets is ingedrukt.
-            # Hetgeen dat me nu redt, is de correct_response, omdat ik die pas definieer als er een toets is ingedrukt.
-            toets_moment = trial_clock.getTime()
-            exp_data["response"][-1] = toetsen[0] 
-            print("HIER KOMT IE WEL!!!, dit is toetsmoment", toets_moment)
-            print(f"En dit is toetsen[0] {toetsen[0]}")
-            exp_data["rt"][-1] = toets_moment - ball_change_moment
-            if ball_change:
-                if task_choice == 'F' and 'space' in toetsen:
-                    if toets_moment < ball_change_moment:
-                        feedback_text = f"Wrong, TOO EARLY"
-                        print(f"Wrong, TOO EARLY")
-                        correct_response = False
-                    else:
-                        feedback_text = f"Correct! detected hue change after {round(toets_moment - ball_change_moment, 3)}s"
-                        print(f"Correct! detected hue change after {round(toets_moment - ball_change_moment, 3)}s")
-                        correct_response = True
-                    
-                if task_choice == 'B' and toetsen[0] in ['left', 'right', 'up', 'down']:
-                    hue_or_speed = "hue" if ball_change_type == 'H' else "speed"
-                    exp_data["response"][-1] = toetsen[0]
-                    exp_data["rt"][-1] = toets_moment - ball_change_moment
-                    if toets_moment < ball_change_moment:
-                        feedback_text = f"Wrong, TOO EARLY"
-                        print(f"Wrong, TOO EARLY")
-                        correct_response = False
-                    elif ball_direction == toetsen[0]:
-                        feedback_text = f"Correct! detected {hue_or_speed} change towards {toetsen[0]} after {round(toets_moment - ball_change_moment, 3)}s"
-                        print(f"Correct! detected hue change towards {toetsen[0]} after {round(toets_moment - ball_change_moment, 3)}s")
-                        correct_response = True
-                    else:
-                        feedback_text = f"Wrong, WRONG DIRECTION, should be a {hue_or_speed} change in {ball_direction} direction"
-                        print(f"Wrong, WRONG DIRECTION, should be {ball_direction}")
-                        correct_response = False
-
-        else:
-            if toetsen != [] and correct_response == None: # If there has been a single response, also respond
-                print(f"Wrong, there was no change")
-                feedback_text = "Wrong, there was no change"
-                correct_response = False
                 
+        toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down'])
+
+        if toetsen != [] and not responded: # If toets pressed and not done so before
+            print(f"Response: {toetsen[0]}")
+            # if bounce_moment == None: # If too early
+            if ball_change_moment == None: # If too early
+                print(f"Wrong, too early")
+                feedback_text = "Wrong, too early"
+                correct_response = False
+                responded = True # QUIT LOOP
+            else: # If on time
+                toets_moment = trial_clock.getTime() # Get the moment of response
+                print(f"This is response: {toetsen[0]}")
+                
+                exp_data["response"][-1] = toetsen[0] # Log the response
+                exp_data["rt"][-1] = toets_moment - ball_change_moment # Log the reaction time
+                
+                if ball_change: # If there was a target change
+                    if task_choice == 'F' and 'space' in toetsen:
+                        if toets_moment < ball_change_moment:
+                            feedback_text = f"Wrong, TOO EARLY"
+                            print(f"Wrong, TOO EARLY")
+                            correct_response = False
+                        else:
+                            feedback_text = f"Correct! detected a change after {round(toets_moment - ball_change_moment, 3)}s"
+                            print(f"Correct! detected a change after {round(toets_moment - ball_change_moment, 3)}s")
+                            correct_response = True
+                        
+                    if task_choice == 'B' and toetsen[0] in ['left', 'right', 'up', 'down']:
+                        hue_or_speed = "hue" if ball_change_type == 'H' else "speed"
+                        exp_data["response"][-1] = toetsen[0]
+                        exp_data["rt"][-1] = toets_moment - ball_change_moment
+                        if toets_moment < ball_change_moment:
+                            feedback_text = f"Wrong, TOO EARLY"
+                            print(f"Wrong, TOO EARLY")
+                            correct_response = False
+                        elif ball_direction == toetsen[0]:
+                            feedback_text = f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                            print(f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s")
+                            correct_response = True
+                        else:
+                            feedback_text = f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
+                            print(f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball")
+                            correct_response = False
+                else: # If there was nothing to detect
+                    print(f"Wrong, there was no change")
+                    feedback_text = "Wrong, there was no change"
+                    correct_response = False
+                responded = True
+        if not responded and ball_change:
+            
+            feedback_text = "Undetected ball change"
+            correct_response = False
+
         exp_data["accuracy"][-1] = correct_response # Werkt (misschien nu niet meer, stond eerst hoger)
 
-
     feedback = visual.TextStim(win, text=feedback_text, 
-                        color='white', pos=(0, 0), height=20)
+                        color='white', pos=(0, 50), height=25)
     feedback.draw()
+    fixation.draw()
     win.flip()
-    
     core.wait(2)
-    
+
     # Reset ball and fixation color to original after each trial
     ball.fillColor = 'white'
     ball.lineColor = 'white'
@@ -343,23 +374,10 @@ for trial in trial_conditions:
             exp_data[f"{hypothesis}_rf{location}"][-1] = pred_to_input[location]
             if sum(pred_to_input[location]) == 2:
                 exp_data[f"{hypothesis}_congruent"][-1] = True # Meaning that prediction and input agree (SEEMS TO WORK!!)
-                
-    # exp_data["response"][-1] = toetsen[0] if toetsen else None # Check of dit de goede is (index misschien onnodig, want overschreven?)
-    # exp_data["accuracy"][-1] = correct_response
-    # exp_data["rt"][-1] = toets_moment - ball_change_moment if toetsen else None
-    
-            
-
-    
-    
-    
     
 win.close()
 
-
-print(exp_data)
 df = pd.DataFrame(exp_data)
-
 
 # Save the DataFrame to a CSV file
 subject_id = "subject_stront"

@@ -40,6 +40,19 @@ def collide(start_direction: str, line_angle: int, ball_speed: float):
     
     return new_direction
 
+def compute_speed(direction_vector):
+    """Computes the speed from the direction vector."""
+    dx, dy = direction_vector
+    speed = math.sqrt(dx**2 + dy**2)
+    return speed
+
+def change_speed(ball_speed: float, change: float, direction: str):
+    """Returns the new direction vector of the ball after a speed change."""
+    dy, dx = _dir_to_vec(direction)
+    new_speed = ball_speed + change
+    new_direction = (dx * new_speed, dy * new_speed)
+    return new_direction
+
 def velocity_to_direction(velocity):
     """Converts a velocity vector to a direction string."""
     x, y = velocity
@@ -91,6 +104,19 @@ def _dir_to_loc(direction:str) -> tuple:
               "left": (1, 0)}
     
     return locations[direction]
+
+def _dir_to_velocity(direction: str | tuple, speed:float) -> tuple:
+    """Turn direction string into velocity representation
+    Args:
+        direction (str): The direction string
+        speed (float): The speed of the object
+    Returns:
+        tuple: The velocity representation in row,column (y,x)
+    """    
+    direction_vector = _dir_to_vec(direction) if isinstance(direction, str) else direction
+    velocity_vector = tuple(speed * dir_axis for dir_axis in direction_vector)
+    
+    return np.array((velocity_vector[1], velocity_vector[0]))
 
 def _rotate_90(start_direction, left_or_right):
     """
