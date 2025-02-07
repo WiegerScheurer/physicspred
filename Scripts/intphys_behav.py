@@ -10,7 +10,10 @@ import sys
 sys.path.append("/Users/wiegerscheurer/repos/physicspred") # To enable importing from repository folders
 
 from functions.utilities import setup_folders, save_performance_data
-from functions.physics import check_collision, collide, velocity_to_direction, predict_ball_path, _flip_dir, compute_speed, change_speed, _rotate_90, _dir_to_velocity, velocity_to_direction
+from functions.physics import (check_collision, collide, velocity_to_direction, 
+                               predict_ball_path, _flip_dir, compute_speed, 
+                               change_speed, _rotate_90, _dir_to_velocity, 
+                               velocity_to_direction)
 
 win_dims = [1000, 1000]
 ball_speed = 2.5 # Used to be 5 when refresh rate was 30
@@ -48,7 +51,7 @@ exp_data = {
 
     
 # Setup the window
-win = visual.Window(win_dims, color='black', units='pix', fullscr=False)
+# win = visual.Window(win_dims, color='black', units='pix', fullscr=False)
 
 # Define stimuli
 fixation = visual.TextStim(win, text='+', color='white', pos=(0, 0), height=50)
@@ -285,8 +288,19 @@ for trial in trial_conditions:
         exp_data["bounce_moment"][-1] = bounce_moment if _flip_dir(ball_direction) != edge else None # Check whether the ball hasn't just continued
         exp_data["end_pos"][-1] = ball_direction # log end position
                 
-        toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down'])
+        # toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down'])
+        toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down', 'escape', 'r']) # Construction set
 
+        # **CHECK FOR 'R' TO SKIP TRIAL OR 'ESCAPE' TO QUIT**
+        # keys = event.getKeys(["r", "escape"])
+        if 'escape' in toetsen:
+            print("ESCAPE PRESSED")
+            win.close()
+            core.quit()
+        elif 'r' in toetsen:
+            print("R PRESSED") 
+            continue  # Skip to the next trial       
+        
         if toetsen != [] and not responded: # If toets pressed and not done so before
             print(f"Response: {toetsen[0]}")
             # if bounce_moment == None: # If too early
@@ -353,13 +367,13 @@ for trial in trial_conditions:
     ball.lineColor = 'white'
     fixation.color = 'white'
 
-    # **CHECK FOR 'R' TO SKIP TRIAL OR 'ESCAPE' TO QUIT**
-    keys = event.getKeys()
-    if 'escape' in keys:
-        win.close()
-        core.quit()
-    elif 'r' in keys:
-        continue  # Skip to the next trial        
+    # # **CHECK FOR 'R' TO SKIP TRIAL OR 'ESCAPE' TO QUIT**
+    # keys = event.getKeys(["r", "escape"])
+    # if 'escape' in keys:
+    #     win.close()
+    #     core.quit()
+    # elif 'r' in keys:
+    #     continue  # Skip to the next trial        
     
     # Figure out how to fill in the RF specific values
     if trial == "none":
