@@ -1,7 +1,0 @@
-trial,interactor,bounce,bounce_moment,random_bounce_direction,target_onset,speed_change,ball_change,abs_congruent,sim_congruent,response,accuracy,rt,start_pos,end_pos,abs_rfup,abs_rfright,abs_rfdown,abs_rfleft,sim_rfup,sim_rfright,sim_rfdown,sim_rfleft
-1,none,False,,,4.764498708420433,faster,True,True,True,down,True,0.8092182083055377,up,down,"(0, 0)","(0, 0)","(1, 1)","(0, 0)","(0, 0)","(0, 0)","(1, 1)","(0, 0)"
-2,none,True,,right,4.870441083330661,slower,True,True,True,up,True,0.9708908334141597,down,up,"(1, 1)","(0, 0)","(0, 0)","(0, 0)","(1, 1)","(0, 0)","(0, 0)","(0, 0)"
-3,none,True,,right,4.863958041765727,slower,True,True,True,left,True,0.993468499975279,right,left,"(0, 0)","(0, 0)","(0, 0)","(1, 1)","(0, 0)","(0, 0)","(0, 0)","(1, 1)"
-4,none,False,,,4.770416333340108,slower,True,True,True,left,True,1.1109054166590795,right,left,"(0, 0)","(0, 0)","(0, 0)","(1, 1)","(0, 0)","(0, 0)","(0, 0)","(1, 1)"
-5,none,False,,,4.848834250005893,slower,True,True,True,left,True,1.19183995842468,right,left,"(0, 0)","(0, 0)","(0, 0)","(1, 1)","(0, 0)","(0, 0)","(0, 0)","(1, 1)"
-6,none,True,,right,4.770483625004999,faster,True,True,True,down,True,1.077204708242789,up,down,"(0, 0)","(0, 0)","(1, 1)","(0, 0)","(0, 0)","(0, 0)","(1, 1)","(0, 0)"

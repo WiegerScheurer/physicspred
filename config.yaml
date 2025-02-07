@@ -1,0 +1,34 @@
+win_dims: [1920, 1080]
+ball_speed: 3
+ball_radius: 40
+interactor_height: 180
+interactor_width: 5
+occluder_radius: 120
+n_trials: 6
+ball_speed_change: .9
+verbose: false
+psychopy_version: "2024.2.4"
+exp_parameters:
+  - trial
+  - interactor
+  - bounce
+  - bounce_moment
+  - random_bounce_direction
+  - target_onset
+  - speed_change
+  - ball_change
+  - abs_congruent
+  - sim_congruent
+  - response
+  - accuracy
+  - rt
+  - start_pos
+  - end_pos
+  - abs_rfup
+  - abs_rfright
+  - abs_rfdown
+  - abs_rfleft
+  - sim_rfup
+  - sim_rfright
+  - sim_rfdown
+  - sim_rfleft
