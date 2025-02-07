@@ -68,11 +68,16 @@ line_135 = visual.Rect(
     lineColor="red",
 )
 line_135.ori = 135 # Rotate the line by 135 degrees
-line_135.pos = (0, offset_y)  # Adjust position
+line_135.pos = (0, -offset_y)  # Adjust position
 
 
-occluder = visual.Circle(
-    win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
+# occluder = visual.Circle(
+#     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
+# )
+
+# Add opacity = .5 to make see-through
+occluder = visual.Rect(
+    win, width=2*occluder_radius, height=2*occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
 )
 
 ### Create borders to maintain square task screen

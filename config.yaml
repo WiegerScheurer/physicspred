@@ -3,9 +3,9 @@ ball_speed: 3
 ball_radius: 40
 interactor_height: 180
 interactor_width: 5
-occluder_radius: 120
-n_trials: 6
-ball_speed_change: .9
+occluder_radius: 130
+n_trials: 10
+ball_speed_change: 1.2
 verbose: false
 psychopy_version: "2024.2.4"
 exp_parameters:

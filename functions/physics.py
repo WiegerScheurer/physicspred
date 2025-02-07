@@ -46,10 +46,10 @@ def compute_speed(direction_vector):
     speed = math.sqrt(dx**2 + dy**2)
     return speed
 
-def change_speed(ball_speed: float, change: float, direction: str):
+def change_speed(ball_speed: float, change_factor: float, direction: str):
     """Returns the new direction vector of the ball after a speed change."""
     dy, dx = _dir_to_vec(direction)
-    new_speed = ball_speed + change
+    new_speed = ball_speed * change_factor
     new_direction = (dx * new_speed, dy * new_speed)
     return new_direction
 
