@@ -27,6 +27,7 @@ from functions.physics import (
     _dir_to_velocity,
     velocity_to_direction,
 )
+from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score
 
 # Load configuration from YAML file (os.par)
 config_path = os.path.join(os.path.dirname(__file__), os.pardir, 'config.yaml')
@@ -34,7 +35,7 @@ with open(config_path, 'r') as file:
     config = yaml.safe_load(file)
 
 # Access parameters from the config dictionary
-win_dims = config['win_dims']
+# win_dims = config['win_dims']
 ball_speed = config['ball_speed']
 ball_radius = config['ball_radius']
 interactor_height = config['interactor_height']
@@ -43,10 +44,9 @@ occluder_radius = config['occluder_radius']
 verbose = config['verbose']
 exp_parameters = config['exp_parameters']
 
+feedback_freq = config["feedback_freq"]
+
 exp_data = {par: [] for par in exp_parameters}
-
-# Load in objects for building the task
-
 
 # Ensure that relative paths start from the same directory as this script
 _thisDir = os.path.dirname(os.path.abspath(__file__))
@@ -60,8 +60,11 @@ expInfo = {
     'session': '001',
     # 'run': f"run-{random.randint(0, 10):02.0f}",
     "task": ["Ball Speed Change", "Fixation Hue Change"],
+    "feedback": ["No", "Yes"]
 }
 
+
+give_feedback = True if expInfo["feedback"] == "Yes" else False
 # --- Show participant info dialog --
 dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
 if dlg.OK == False:
@@ -72,27 +75,9 @@ expInfo['psychopyVersion'] = psychopyVersion
 
 from objects.task_components import win, ball, left_border, right_border, top_border, bottom_border, line_45, line_135, occluder, fixation
 
+win_dims = win.size
 
-# Setup the window
-# win = visual.Window(win_dims, color='black', units='pix', fullscr=False)
-
-# win = visual.Window(
-#     size=win_dims,        # The size of the window in pixels (width, height).
-#     fullscr=False,             # Whether to run in full-screen mode. Overrides size arg
-#     screen=0,                 # The screen number to display the window on (0 is usually the primary screen).
-#     winType='pyglet',         # The backend to use for the window (e.g., 'pyglet', 'pygame').
-#     allowStencil=False,       # Whether to allow stencil buffer (used for advanced graphics).
-#     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
-#     color="black", #[0, 0, 0],          # The background color of the window (in RGB space).
-#     colorSpace='rgb',         # The color space for the background color (e.g., 'rgb', 'dkl', 'lms').
-#     backgroundImage='',       # Path to an image file to use as the background.
-#     backgroundFit='none',     # How to fit the background image ('none', 'fit', 'stretch').
-#     blendMode='avg',          # The blend mode for drawing (e.g., 'avg', 'add').
-#     useFBO=True,              # Whether to use Frame Buffer Objects (for advanced graphics).
-#     units='pix'            # The default units for window operations (e.g., 'pix', 'norm', 'cm', 'deg', 'height').
-# )
-
-
+print(f"Screen dimensions: {win_dims}")
 
 win.mouseVisible = False
 
@@ -117,104 +102,7 @@ refreshInformation = visual.TextStim(win=win, name='refreshInformation',
     languageStyle='LTR',
     depth=-1.0)
 
-# refreshInformation.setAutoDraw(True)
-# check_refreshrate_resp = keyboard.Keyboard()
-
-# Define stimuli
-# fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0), height=30)
-
-# # Define a square and rotate it to create a thick line
-# line_45 = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_45.ori = 45  # Rotate the square by 45 degrees
-
-# line_135 = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_135.ori = 135 
-
-# # Calculate the offset
-# offset_y = interactor_width / 2
-
-# # Define line_45
-# line_45 = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_45.ori = 45  # Rotate the line by 45 degrees
-# line_45.pos = (-offset_y, 0)  # Adjust position
-
-# # Define line_135
-# line_135 = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_135.ori = 135 # Rotate the line by 135 degrees
-# line_135.pos = (-offset_y, 0)  # Adjust position
-
-
-# occluder = visual.Circle(
-#     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
-# )
-
-### Create borders to maintain square task screen
-# Calculate the size of the square field
-square_size = min(win_dims)
-
-# # Create the grey borders
-# left_border = visual.Rect(
-#     win=win,
-#     width=(win_dims[0] - square_size) / 2,
-#     height=win_dims[1],
-#     fillColor='grey',
-#     lineColor='grey',
-#     pos=[-(win_dims[0] - square_size) / 4 - square_size / 2, 0]
-# )
-
-# right_border = visual.Rect(
-#     win=win,
-#     width=(win_dims[0] - square_size) / 2,
-#     height=win_dims[1],
-#     fillColor='grey',
-#     lineColor='grey',
-#     pos=[(win_dims[0] - square_size) / 4 + square_size / 2, 0]
-# )
-
-# top_border = visual.Rect(
-#     win=win,
-#     width=win_dims[0],
-#     height=(win_dims[1] - square_size) / 2,
-#     fillColor='grey',
-#     lineColor='grey',
-#     pos=[0, (win_dims[1] - square_size) / 4 + square_size / 2]
-# )
-
-# bottom_border = visual.Rect(
-#     win=win,
-#     width=win_dims[0],
-#     height=(win_dims[1] - square_size) / 2,
-#     fillColor='grey',
-#     lineColor='grey',
-#     pos=[0, -(win_dims[1] - square_size) / 4 - square_size / 2]
-# )
-
-# # Define ball
-# ball = visual.Circle(win, radius=ball_radius, fillColor="white", lineColor="white")
+square_size = config["square_size"]
 
 n_trials = config["n_trials"] # Number of trials
 
@@ -249,6 +137,7 @@ directions = {
     "right": (-ball_speed, 0),
 }
 
+# Do this more elegantly, in a way or another. 
 fast_ball_speed = ball_speed * config["ball_speed_change"]
 fast_directions = {
     "up": (0, -fast_ball_speed),
@@ -321,47 +210,11 @@ while ready_to_start != "SPACE":
     ready_to_start = event.waitKeys(keyList=["space"])[0].upper()  # Ensures only one key is read
     
 
-# while task_choice not in ["F", "B"]:
-#     instruction_text = visual.TextStim(
-#         win,
-#         text="Press 'F' for Fixation Hue Change Task\nPress 'B' for Ball Change Task",
-#         color="white",
-#         pos=(0, 0),
-#         height=20,
-#     )
-#     instruction_text.draw()
-#     win.flip()
-#     task_choice = event.waitKeys(keyList=["f", "b"])[
-#         0
-#     ].upper()  # Ensures only one key is read
-
-# if task_choice == "B":
-#     while ball_change_type not in ["H", "S"]:
-#         instruction_text = visual.TextStim(
-#             win,
-#             text="Press 'H' for Ball Hue Change\nPress 'S' for Ball Speed Change",
-#             color="white",
-#             pos=(0, 0),
-#             height=20,
-#         )
-#         instruction_text.draw()
-#         win.flip()
-#         ball_change_type = event.waitKeys(keyList=["h", "s"])[
-#             0
-#         ].upper()  # Ensures only one key is read
-
-# print(
-#     f"Selected task: {'Fixation Hue Change' if task_choice == 'F' else 'Ball Change'}"
-# )
-# if task_choice == "B":
-#     print(
-#         f"Ball change type: {'Hue Change' if ball_change_type == 'H' else 'Speed Change'}"
-#     )
-
-task_choice = expInfo["task"][0]
 ball_change_type = "S"
+task_choice = expInfo["task"][0]
 
 for trial_number, trial in enumerate(trials):
+    
     trial_clock = core.Clock()  # Create a clock for the trial
     
     left_border.draw()
@@ -397,7 +250,6 @@ for trial_number, trial in enumerate(trials):
     occluder.draw()
     fixation.draw()
     win.flip()
-    # core.wait(0.5)  # Occluder display
     core.wait(1)  # Occluder display
 
     # Ball movement setup
@@ -421,11 +273,9 @@ for trial_number, trial in enumerate(trials):
     left_occluder = False
     ball_change_moment = None
     occluder_exit_moment = None
-    trial_duration = win_dims[1] // (800 / 10) #  13 seconds now, scales with screensize, ideally
+    # trial_duration = win_dims[1] // (800 / 10) #  13 seconds now, scales with screensize, ideally (NO should be same, the rest should scale)
+    trial_duration = square_size // (800 / 10)
     print(f"Trial duration = {trial_duration}s") if verbose else None
-    
-    # Apply hue change based on selected task
-    feedback_text = ""
 
 ##################### NEW CODE, integrate with stuff abocve, where I intiisalise the exp_data
     # Store trial characteristics
@@ -660,17 +510,17 @@ for trial_number, trial in enumerate(trials):
                         exp_data["response"][-1] = toetsen[0]
                         exp_data["rt"][-1] = toets_moment - ball_change_moment
                         if toets_moment < ball_change_moment:
-                            feedback_text = f"Wrong, TOO EARLY"
+                            feedback_text = f"Responded too early" #if give_feedback else ""
                             print(f"Wrong, TOO EARLY")
                             correct_response = False
                         elif ball_direction == toetsen[0]:
-                            feedback_text = f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                            feedback_text = f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s" if give_feedback else ""
                             print(
                                 f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
                             )
                             correct_response = True
                         else:
-                            feedback_text = f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
+                            feedback_text = f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball" if give_feedback else ""
                             print(
                                 f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
                             )
@@ -684,12 +534,12 @@ for trial_number, trial in enumerate(trials):
             # if not responded:
             if ball_change:
                 # SOMETHING IS VERY WRONG HERRE WTF
-                feedback_text = f"Undetected ball change, it was a {rand_speed_change} {ball_direction}ward ball"
+                feedback_text = f"Undetected ball change, it was a {rand_speed_change} {ball_direction}ward ball" if give_feedback else ""
                 correct_response = False
                 print(feedback_text)
             else:
-                feedback_text = "No change detected and no response needed"
-                correct_response = True
+                feedback_text = ""
+                correct_response = None
                 print(feedback_text)
                 # if not responded and ball_change:
                 #     # SOMETHING IS VERY WRONG HERRE WTF
@@ -699,6 +549,34 @@ for trial_number, trial in enumerate(trials):
         exp_data["accuracy"][
             -1
         ] = correct_response  # Werkt (misschien nu niet meer, stond eerst hoger)
+    
+    # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
+    for hypothesis in ["abs", "sim"]:
+        pred_to_input = predict_ball_path(
+            hypothesis=hypothesis,
+            interactor=trial,
+            start_pos=edge,
+            end_pos=exp_data["end_pos"][-1],
+            plot=False,
+        )
+        exp_data[f"{hypothesis}_congruent"][-1] = False  # Initialize as False
+        for location in pred_to_input.keys():
+            exp_data[f"{hypothesis}_rf{location}"][-1] = pred_to_input[location]
+            if sum(pred_to_input[location]) == 2:
+                exp_data[f"{hypothesis}_congruent"][
+                    -1
+                ] = True  # Meaning that prediction and input agree (SEEMS TO WORK!!)
+
+    if (trial_number + 1) % feedback_freq == 0 and trial_number > 10:
+        intermit_data = pd.DataFrame(exp_data)
+        this_precision = get_precision(intermit_data, hypothesis="both", include_dubtrials=False, return_df=False)
+        this_sensitivity = get_sensitivity(intermit_data, hypothesis="both", include_dubtrials=False, return_df=False)
+        this_f1 = get_f1_score(intermit_data, hypothesis="both", include_dubtrials=False, return_df=False)
+        # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
+        feedback_text = f'Current accuracy: {np.mean((this_precision["simulation"], this_precision["abstraction"]))}% changes detected!'
+        # feedback_text = "Theoretical feedback, implement still"
+    else:
+        feedback_text = ""
 
     feedback = visual.TextStim(
         win, text=feedback_text, color="white", pos=(0, 50), height=30
@@ -724,23 +602,25 @@ for trial_number, trial in enumerate(trials):
         # exp_data["abs_congruent"][-1] = 1 if exp_data["bounce"] != None else 0
         # exp_data["sim_congruent"][-1] = 1 if exp_data["bounce"] != None else 0
 
-    # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
-    for hypothesis in ["abs", "sim"]:
-        pred_to_input = predict_ball_path(
-            hypothesis=hypothesis,
-            interactor=trial,
-            start_pos=edge,
-            end_pos=exp_data["end_pos"][-1],
-            plot=False,
-        )
-        exp_data[f"{hypothesis}_congruent"][-1] = False  # Initialize as False
-        for location in pred_to_input.keys():
-            exp_data[f"{hypothesis}_rf{location}"][-1] = pred_to_input[location]
-            if sum(pred_to_input[location]) == 2:
-                exp_data[f"{hypothesis}_congruent"][
-                    -1
-                ] = True  # Meaning that prediction and input agree (SEEMS TO WORK!!)
+    # # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
+    # for hypothesis in ["abs", "sim"]:
+    #     pred_to_input = predict_ball_path(
+    #         hypothesis=hypothesis,
+    #         interactor=trial,
+    #         start_pos=edge,
+    #         end_pos=exp_data["end_pos"][-1],
+    #         plot=False,
+    #     )
+    #     exp_data[f"{hypothesis}_congruent"][-1] = False  # Initialize as False
+    #     for location in pred_to_input.keys():
+    #         exp_data[f"{hypothesis}_rf{location}"][-1] = pred_to_input[location]
+    #         if sum(pred_to_input[location]) == 2:
+    #             exp_data[f"{hypothesis}_congruent"][
+    #                 -1
+    #             ] = True  # Meaning that prediction and input agree (SEEMS TO WORK!!)
 
+    
+    
 win.close()
 
 df = pd.DataFrame(exp_data)

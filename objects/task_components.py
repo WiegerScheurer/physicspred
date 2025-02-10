@@ -13,7 +13,7 @@ with open(config_path, 'r') as file:
     config = yaml.safe_load(file)
 
 # Access parameters from the config dictionary
-win_dims = config['win_dims']
+# win_dims = config['win_dims']
 ball_speed = config['ball_speed']
 ball_radius = config['ball_radius']
 interactor_height = config['interactor_height']
@@ -21,12 +21,13 @@ interactor_width = config['interactor_width']
 occluder_radius = config['occluder_radius']
 verbose = config['verbose']
 exp_parameters = config['exp_parameters']
+square_size = config["square_size"]
 
 exp_data = {par: [] for par in exp_parameters}
 
 win = visual.Window(
-    size=win_dims,        # The size of the window in pixels (width, height).
-    fullscr=False,             # Whether to run in full-screen mode. Overrides size arg
+    # size=win_dims,        # The size of the window in pixels (width, height).
+    fullscr=True,             # Whether to run in full-screen mode. Overrides size arg
     screen=0,                 # The screen number to display the window on (0 is usually the primary screen).
     winType='pyglet',         # The backend to use for the window (e.g., 'pyglet', 'pygame').
     allowStencil=False,       # Whether to allow stencil buffer (used for advanced graphics).
@@ -40,6 +41,7 @@ win = visual.Window(
     units='pix'            # The default units for window operations (e.g., 'pix', 'norm', 'cm', 'deg', 'height').
 )
 
+win_dims = win.size
 
 fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0), height=50)
 
@@ -82,7 +84,8 @@ occluder = visual.Rect(
 
 ### Create borders to maintain square task screen
 # Calculate the size of the square field
-square_size = min(win_dims)
+# square_size = min(win_dims)
+# square_size = 1000
 
 # Create the grey borders
 left_border = visual.Rect(
