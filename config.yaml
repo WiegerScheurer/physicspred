@@ -1,18 +1,24 @@
 # win_dims: [1920, 1080]
 # win_dims: [3840, 2160]
-ball_speed: 3
+avg_ball_speed: 4
+natural_speed_variance: .5
+timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3
 ball_radius: 40
 square_size: 1080
 interactor_height: 180
 interactor_width: 5
 occluder_radius: 130
+occluder_opacity: 1
 feedback_freq: 10
 n_trials: 30
 ball_speed_change: 1.2
+ball_spawn_spread: 1.8 # smaller is more spread (I think)
 verbose: false
+experiment_screen: 1
 psychopy_version: "2024.2.4"
 exp_parameters:
   - trial
+  - ball_speed
   - interactor
   - bounce
   - bounce_moment

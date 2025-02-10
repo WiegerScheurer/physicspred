@@ -19,6 +19,10 @@ def get_data(subject:str | None=None, datadir: str | None=None, task: str | None
                 this_file = pd.read_csv(f"{datadir}/{sub}/{task}/{file}")
                 file_stack.append(this_file)
 
+        # Check if there's a column with "ball_speed", and if not, create one and fill with None
+        if "ball_speed" not in this_file.columns:
+            this_file["ball_speed"] = None
+            
         # Concatenate all DataFrames in the list into a single DataFrame
         combined_df = pd.concat(file_stack, ignore_index=True)
 
@@ -53,14 +57,16 @@ def get_precision(df, hypothesis:str = "both", include_dubtrials=False, return_d
         filtered_df = df[
             # (df['ball_change'] == True) & # Only trials with a target
             (df['response'] != None) & # Only trials with a target
+            (df['accuracy'] != None) & # Only trials with an accuracy value
             (df[hypothesis[:3] + '_congruent'] == True) & # Only trials congruent with the hypothesis
             (~df[other_hypothesis[:3] + '_congruent']) # Only trials incongruent with the other hypothesis
         ]
         if include_dubtrials:
             filtered_df = df[
-                (df['ball_change'] == True) & # Only trials with a target
-                (df[hypothesis[:3] + '_congruent'] == True)] # Only trials congruent with the hypothesis
-        
+            (df['response'] != None) & # Only trials with a target
+            (df['accuracy'] != None) & # Only trials with an accuracy value
+            (df[hypothesis[:3] + '_congruent'] == True) # Only trials congruent with the hypothesis
+            ]
         # Compute the mean, which works because you have 1 for True and 0 for False
         output = np.mean(filtered_df['accuracy']) if not return_df else filtered_df
         stat_dict[hypothesis] = output
@@ -87,12 +93,14 @@ def get_sensitivity(df, hypothesis:str = "both", include_dubtrials=False, return
         
         target_trials = df[
             (df['ball_change'] == True) & # Only trials with a target
+            (df['accuracy'] != None) & # Only trials with an accuracy value
             (df[hypothesis[:3] + '_congruent'] == True) & # Only trials congruent with the hypothesis
             (~df[other_hypothesis[:3] + '_congruent']) # Only trials incongruent with the other hypothesis
         ]
         if include_dubtrials:
             target_trials = df[
                 (df['ball_change'] == True) & # Only trials with a target
+                (df['accuracy'] != None) & # Only trials with an accuracy value
                 (df[hypothesis[:3] + '_congruent'] == True)] # Only trials congruent with the hypothesis
              
         output = np.mean(target_trials['accuracy']) if not return_df else target_trials
