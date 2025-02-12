@@ -27,6 +27,7 @@ from functions.utilities import (
     determine_sequence,
     count_list_types,
     get_pos_and_dirs,
+    truncated_exponential_decay,
 )
 from functions.physics import (
     check_collision,
@@ -146,7 +147,7 @@ trial_options = ["45", "135", "none"]
 edge_options = ["up", "down", "left", "right"]
 bounce_options = [True, False]
 rand_bounce_direction_options = ["left", "right"]
-ball_change_options = [True] + [False] * 1
+ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
 rand_speed_change_options = ["slower", "faster"]
 natural_speed_variance = config["natural_speed_variance"]
 ball_speed_options = list(
@@ -174,10 +175,24 @@ ball_spawn_spread = config[
     "ball_spawn_spread"
 ]  # Margin around fixation where the ball can spawn (smaller = )
 
+itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"], n_trials)
+
+# Generate a random ITI for each trial
+# itis = np.random.uniform(config["min_iti"], config["max_iti"], n_trials)
+
+# MRI RELATED::::: DO I NEED TO HAVE MY JITTER, OR ITI VARIABILITY IN ACCORDANCE WITH MY TR? OR WHAT DO WE DO? 
+# IN NSD, FOR EXAMPLE, THEY JUST HAVE THESE BLANK TRIALS
+# READ UP ON MUMFORD'S STUFF ON COLLINEARITY AND SUCH, AS SHE ARGUES THAT
+# A LOT OF METHODS TO OVERCOME COLINEARITY BETWEEN YOUR REGRESSORS ACTUALLY
+# INTRODUCE NOVEL PROBLEMS.
+
+
+
 # Define the start and end colors for the subtle hue change
 start_color = np.array([1.0, 1.0, 1.0])  # White
 # end_color = np.array([0.9, 0.9, 0.9])    # Light gray
 end_color = np.array([0.75, 0.75, 0.75])  # Light gray
+# end_color = np.array([0, 1.0, 0])  # Light green for pilot
 
 # **TASK SELECTION MENU**
 task_choice = None
@@ -230,7 +245,7 @@ while ready_to_start != "SPACE":
     ].upper()  # Ensures only one key is read
 
 
-ball_change_type = "S"
+ball_change_type = "S" if task_choice != "Fixation Hue Change" else "H"
 # task_choice = expInfo["task"][0]
 task_choice = expInfo["task"]
 
@@ -251,7 +266,8 @@ for trial_number, trial in enumerate(trials):
     refreshInformation.setAutoDraw(True)
     fixation.draw()
     win.flip()
-    core.wait(2 * timing_factor)  # Fixation display
+    # core.wait(2 * timing_factor)  # Fixation display
+    core.wait(config["fixation_time"])
 
     left_border.draw()
     right_border.draw()
@@ -264,7 +280,8 @@ for trial_number, trial in enumerate(trials):
     fixation.draw()
 
     win.flip()
-    core.wait(2 * timing_factor)  # Fixation + diagonal line display
+    # core.wait(2 * timing_factor)  # Fixation + diagonal line display
+    core.wait(config["interactor_time"])
 
     left_border.draw()
     right_border.draw()
@@ -277,7 +294,8 @@ for trial_number, trial in enumerate(trials):
     occluder.draw() # if occluder_opaque else occluder_glass.draw()
     fixation.draw()
     win.flip()
-    core.wait(1 * timing_factor)  # Occluder display
+    # core.wait(1 * timing_factor)  # Occluder display
+    core.wait(config["occluder_time"])
 
     # Ball movement setup
     edge = edges[trial_number]  # Ball start position
@@ -305,9 +323,19 @@ for trial_number, trial in enumerate(trials):
     left_occluder = False
     ball_change_moment = None
     occluder_exit_moment = None
+    hue_changed = False
+    hue_changed_back = False
     # trial_duration = win_dims[1] // (800 / 10) #  13 seconds now, scales with screensize, ideally (NO should be same, the rest should scale)
-    trial_duration = square_size // (800 / 10) * timing_factor
-    print(f"Trial duration = {trial_duration}s") if verbose else None
+    # trial_duration = square_size // (800 / 10) * timing_factor ### TODO: MAAK SOM VAN core.wait() elementen en de rest
+    trial_duration = (config["fixation_time"] + 
+                      config["interactor_time"] + 
+                      config["occluder_time"] + 
+                      config["ballmov_time"] +
+                      config["feedback_time"] + 
+                      config["inter_trial_interval"])
+    
+    
+    print(f"Trial duration = {trial_duration}s") # if verbose else None
 
     ##################### NEW CODE, integrate with stuff abocve, where I intiisalise the exp_data
     # Store trial characteristics
@@ -389,7 +417,7 @@ for trial_number, trial in enumerate(trials):
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()
-        core.wait(0.01)  # Smooth animation, frame time, presumably
+        core.wait(config["frame_rate"])  # Smooth animation, for 60 Hz do (1/60) which is 0.0166667
 
         if (task_choice == "Ball Hiccup" and
             # rand_speed_change == "faster" and
@@ -467,13 +495,24 @@ for trial_number, trial in enumerate(trials):
             if bounce_moment != None and ball_change_moment != None:
                 elapsed_time = trial_clock.getTime() - ball_change_moment
 
-                duration = 0.5  # Duration of the color change in seconds
-                factor = min(
-                    elapsed_time / duration, 1.0
-                )  # Ensure factor is between 0 and 1
+                duration = config["hue_change_duration"]  # Duration of the color change in seconds
+                factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
 
-                if task_choice == "F" and ball_change:
-                    fixation.color = interpolate_color(start_color, end_color, factor)
+                if task_choice == "Fixation Hue Change" and ball_change and not hue_changed_back:
+                    if not hue_changed:
+                        fixation.color = interpolate_color(start_color, end_color, factor)
+                        if np.all(fixation.color == end_color):  # Check if the color has fully changed
+                            hue_changed = True  # Hue change confirmation toggle
+                            ball_change_moment = trial_clock.getTime()  # Reset the change moment
+                            print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
+                    else:
+                        elapsed_time_inv = trial_clock.getTime() - ball_change_moment
+                        factor_inv = min(elapsed_time_inv / duration, 1.0)
+                        fixation.color = interpolate_color(end_color, start_color, factor_inv)
+                        if np.all(fixation.color == start_color):  # Check if the color has fully changed back
+                            hue_changed_back = True  # Reset the hue change confirmation toggle
+                            print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
+                            print("Hue change") # if verbose else None
 
                 elif task_choice == "Ball Speed Change" and ball_change and not speed_changed:
                     print(f"Current speed: {compute_speed(velocity):.2f}")
@@ -488,25 +527,7 @@ for trial_number, trial in enumerate(trials):
                     speed_changed = True
 
                 elif task_choice == "Ball Hiccup" and ball_change:
-                    # ball_direction = velocity_to_direction(velocity)
-
-                    # if rand_speed_change == "slower": # THIS WORKS AS IS
-                    #     if elapsed_time < 0.2:
-                    #         velocity = np.array(
-                    #             wait_directions[_flip_dir(ball_direction)]
-                    #         )
-                    #     else:
-                    #         velocity = np.array(
-                    #             directions[_flip_dir(ball_direction)]
-                    #         )
-                    # elif rand_speed_change == "faster":
-                    #     if elapsed_time < 0.02: # SEEMS TO WORK
-                    #         velocity = np.array(
-                    #             skip_directions[_flip_dir(ball_direction)]
-                    #         )
-                    #     else:
-                    #         velocity = np.array(directions[_flip_dir(ball_direction)])
-                        
+                    # This is most likely not necessary, but the speed_changed works as a toggle
                     print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
                     speed_changed = True
                 
@@ -595,7 +616,6 @@ for trial_number, trial in enumerate(trials):
         elif trial_clock.getTime() > trial_duration and not responded:
             # if not responded:
             if ball_change:
-                # SOMETHING IS VERY WRONG HERRE WTF
                 feedback_text = (
                     f"Undetected ball change, it was a {rand_speed_change} {ball_direction}ward ball"
                     if give_feedback
@@ -645,7 +665,7 @@ for trial_number, trial in enumerate(trials):
             intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
         )
         # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
-        feedback_text = f'Current accuracy: {np.mean((this_precision["simulation"], this_precision["abstraction"]))}% changes detected!'
+        feedback_text = f'Current accuracy: {np.mean((this_precision["simulation"], this_precision["abstraction"])):.2f}% changes detected!'
         # feedback_text = "Theoretical feedback, implement still"
     else:
         feedback_text = ""
@@ -660,7 +680,8 @@ for trial_number, trial in enumerate(trials):
     feedback.draw()
     fixation.draw()
     win.flip()
-    core.wait(2 * timing_factor)
+    # core.wait(2 * timing_factor) # Time for feedback
+    core.wait(config["feedback_time"])
 
     # Reset ball and fixation color to original after each trial
     ball.fillColor = "white"

@@ -1,7 +1,9 @@
 from datetime import datetime
 import random
 import os
-
+from scipy.stats import truncexpon
+import matplotlib.pyplot as plt
+import numpy as np
 
 def count_list_types(list):
     """
@@ -159,3 +161,50 @@ def get_pos_and_dirs(ball_speed, square_size, ball_spawn_spread, ball_speed_chan
     
 
     return start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions
+
+
+def truncated_exponential_decay(min_iti, truncation_cutoff, size=1000):
+    """
+    Generate a truncated exponential decay distribution.
+
+    Parameters:
+        min_iti (float): The minimum ITI (lower bound of the distribution).
+        truncation_cutoff (float): The upper bound of the distribution.
+        size (int): Number of samples to generate.
+
+    Returns:
+        samples (numpy.ndarray): Random samples from the truncated exponential distribution.
+    """
+    # Define the scale parameter for the exponential decay
+    scale = 1.0  # Adjust this to control the steepness of decay
+    b = (truncation_cutoff - min_iti) / scale  # Shape parameter for truncation
+
+    # Generate random samples
+    samples = truncexpon(b=b, loc=min_iti, scale=scale).rvs(size=size)
+    return samples
+
+def plot_distribution(samples, min_iti, truncation_cutoff):
+    """
+    Plot the histogram of the truncated exponential distribution.
+
+    Parameters:
+        samples (numpy.ndarray): Random samples from the truncated exponential distribution.
+        min_iti (float): The minimum ITI.
+        truncation_cutoff (float): The upper bound of the distribution.
+    """
+    plt.figure(figsize=(8, 5))
+    plt.hist(samples, bins=30, density=True, alpha=0.6, color='blue', label="Sampled Data")
+
+    # Plot theoretical PDF for comparison
+    scale = 1.0
+    b = (truncation_cutoff - min_iti) / scale
+    x = np.linspace(min_iti, truncation_cutoff, 100)
+    pdf = truncexpon(b=b, loc=min_iti, scale=scale).pdf(x)
+    plt.plot(x, pdf, 'r-', lw=2, label="Theoretical PDF")
+
+    plt.title("Truncated Exponential Decay Distribution")
+    plt.xlabel("Interval")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
