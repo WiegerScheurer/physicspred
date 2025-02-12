@@ -263,3 +263,17 @@ def predict_ball_path(hypothesis: str, interactor: str, start_pos: str, end_pos:
         plot_positions(start_pos, end_pos, pred_to_input, interactor)
     
     return pred_to_input_tuples
+
+def get_dist_dif(ball_radius):
+    """
+    Calculate the difference in distance between a bouncing ball
+    and a continuous ball, based on the horizontal side of the
+    triangle formed by the ball when hitting a 45-degree angle.
+    
+    Parameters:
+        ball_radius (float): The radius of the ball.
+    
+    Returns:
+        float: The the less distance traveled by the bouncing ball.
+    """
+    return np.cos(np.deg2rad(45)) * ball_radius

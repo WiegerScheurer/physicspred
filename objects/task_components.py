@@ -14,7 +14,7 @@ with open(config_path, "r") as file:
     config = yaml.safe_load(file)
 
 # Access parameters from the config dictionary
-win_dims = config['win_dims']
+# win_dims = config['win_dims']
 # ball_speed = config['ball_speed']
 ball_radius = config["ball_radius"]
 interactor_height = config["interactor_height"]
@@ -28,7 +28,7 @@ occluder_opacity = config["occluder_opacity"]
 exp_data = {par: [] for par in exp_parameters}
 
 win = visual.Window(
-    size=win_dims,        # The size of the window in pixels (width, height).
+    # size=win_dims,        # The size of the window in pixels (width, height).
     fullscr=config["full_screen"],  # Whether to run in full-screen mode. Overrides size arg
     screen=config["experiment_screen"],  # The screen number to display the window on (0 is usually the primary screen).
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').

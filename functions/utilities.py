@@ -106,13 +106,21 @@ def determine_sequence(n_trials: int, options: list, randomised: bool = True) ->
     return balanced_sequence
 
 
-def get_pos_and_dirs(ball_speed, square_size, ball_spawn_spread, ball_speed_change):
+def get_pos_and_dirs(ball_speed, square_size, ball_spawn_spread, ball_speed_change, ball_radius):
     # Possible starting positions
+    # start_positions = {
+    #     "up": (0, square_size // ball_spawn_spread),
+    #     "down": (0, -square_size // ball_spawn_spread),
+    #     "left": (-square_size // ball_spawn_spread, 0),
+    #     "right": (square_size // ball_spawn_spread, 0),
+    # }
+    out_of_bounds = (square_size // 2) + (ball_radius)
+    
     start_positions = {
-        "up": (0, square_size // ball_spawn_spread),
-        "down": (0, -square_size // ball_spawn_spread),
-        "left": (-square_size // ball_spawn_spread, 0),
-        "right": (square_size // ball_spawn_spread, 0),
+        "up": (0, out_of_bounds),
+        "down": (0, -out_of_bounds),
+        "left": (-out_of_bounds, 0),
+        "right": (out_of_bounds, 0),
     }
 
     # Base directions
@@ -183,6 +191,41 @@ def truncated_exponential_decay(min_iti, truncation_cutoff, size=1000):
     samples = truncexpon(b=b, loc=min_iti, scale=scale).rvs(size=size)
     return samples
 
+def two_sided_truncated_exponential(center, min_jitter, max_jitter, scale=1.0, size=1000):
+    """
+    Generate a two-sided truncated exponential decay distribution that peaks at the center.
+
+    Parameters:
+        center (float): The central point of the distribution (e.g., critical event time).
+        min_jitter (float): The minimum jitter value (left bound).
+        max_jitter (float): The maximum jitter value (right bound).
+        scale (float): The scale parameter controlling steepness of the decay.
+        size (int): Number of samples to generate.
+
+    Returns:
+        samples (numpy.ndarray): Random samples from the two-sided truncated exponential distribution.
+    """
+    # Create an array of possible jitter values
+    x = np.linspace(min_jitter, max_jitter, 1000)
+    
+    # Define left and right exponential decays
+    left_decay = np.exp(-(center - x[x <= center]) / scale)
+    right_decay = np.exp(-(x[x > center] - center) / scale)
+    
+    # Combine left and right sides
+    pdf = np.concatenate([left_decay, right_decay])
+    
+    # Normalize PDF so it integrates to 1
+    pdf /= np.sum(pdf)
+    
+    # Sample from this custom PDF using inverse transform sampling
+    cdf = np.cumsum(pdf)  # Compute cumulative density function
+    cdf /= cdf[-1]  # Ensure CDF ends at 1
+    random_values = np.random.rand(size)  # Uniform random values between 0 and 1
+    samples = np.interp(random_values, cdf, x)  # Map random values to jitter times
+    
+    return samples
+
 def plot_distribution(samples, min_iti, truncation_cutoff):
     """
     Plot the histogram of the truncated exponential distribution.
@@ -204,6 +247,25 @@ def plot_distribution(samples, min_iti, truncation_cutoff):
 
     plt.title("Truncated Exponential Decay Distribution")
     plt.xlabel("Interval")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def plot_two_sided_distribution(samples, center_time, min_jitter, max_jitter, scale=1.0):
+    # Plot histogram of sampled data
+    plt.hist(samples, bins=30, density=True, alpha=0.6, color='blue', label="Sampled Data")
+
+    # Plot theoretical PDF for visualization
+    x = np.linspace(min_jitter, max_jitter, 1000)
+    left_decay = np.exp(-(center_time - x[x <= center_time]) / scale)
+    right_decay = np.exp(-(x[x > center_time] - center_time) / scale)
+    pdf = np.concatenate([left_decay, right_decay])
+    pdf /= np.sum(pdf) * (x[1] - x[0])  # Normalize for plotting purposes
+    plt.plot(x, pdf, 'r-', lw=2, label="Theoretical PDF")
+
+    plt.title("Two-Sided Truncated Exponential Decay")
+    plt.xlabel("Time relative to center (s)")
     plt.ylabel("Density")
     plt.legend()
     plt.grid(True)

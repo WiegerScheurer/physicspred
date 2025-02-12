@@ -28,6 +28,7 @@ from functions.utilities import (
     count_list_types,
     get_pos_and_dirs,
     truncated_exponential_decay,
+    two_sided_truncated_exponential,
 )
 from functions.physics import (
     check_collision,
@@ -42,6 +43,54 @@ from functions.physics import (
     velocity_to_direction,
 )
 from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score
+
+#############################
+from psychopy import core, event, visual
+
+def show_break(win, duration=10):
+    clock = core.Clock()
+    countdown_text = visual.TextStim(win, text='', pos=(0, 0), height=20)
+    break_text = visual.TextStim(win, text='You deserve a break now. Press space if you disagree.', pos=(0, 50), height=30)
+    
+    while clock.getTime() < duration:
+        remaining_time = duration - int(clock.getTime())
+        countdown_text.text = f'Break ends in {remaining_time} seconds'
+        countdown_text.draw()
+        break_text.draw()
+        win.flip()
+        
+        keys = event.getKeys(keyList=['space'])
+        if 'space' in keys:
+            break
+
+    # Clear any remaining key presses
+    event.clearEvents()
+    
+# def show_endscreen(win, duration=10):
+#     clock = core.Clock()
+#     while clock.getTime() < duration:
+#         end_text = visual.TextStim(win, text='You have completed the task. Thank you for your participation.', pos=(0, 0), height=30)
+#         end_text.draw()
+#         win.flip()
+#         core.wait(5)
+        
+#         keys = event.getKeys(keyList=['space'])
+#         if 'space' in keys:
+#             break
+
+# Function to calculate the decay factor
+def calculate_decay_factor(start_speed, elapsed_time, total_time):
+    constant = 0.007/6 # Based on what my eyes see as a realistic decay
+    # constant = 1
+    decay_rate = start_speed * constant  # Adjust this value to control the rate of decay
+    return np.exp(-decay_rate * (elapsed_time / total_time))
+
+        
+
+############################################
+
+
+
 
 # Load configuration from YAML file (os.par)
 config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config.yaml")
@@ -139,6 +188,7 @@ refreshInformation = visual.TextStim(
 )
 
 square_size = config["square_size"]
+# square_size = min(win.size)  # Get the smallest dimension of the window
 skip_factor = 1
 n_trials = config["n_trials"]  # Number of trials
 
@@ -150,13 +200,14 @@ rand_bounce_direction_options = ["left", "right"]
 ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
 rand_speed_change_options = ["slower", "faster"]
 natural_speed_variance = config["natural_speed_variance"]
-ball_speed_options = list(
-    np.arange(
-        avg_ball_speed - natural_speed_variance,
-        avg_ball_speed + (2 * natural_speed_variance),
-        natural_speed_variance,
-    )
-)
+# ball_speed_options = list(
+#     np.arange(
+#         avg_ball_speed - natural_speed_variance,
+#         avg_ball_speed + (2 * natural_speed_variance),
+#         natural_speed_variance,
+#     )
+# )
+ball_speed_options = [avg_ball_speed] * 2
 
 # Create deterministically randomised; balanced parameter sequences
 trials = determine_sequence(n_trials, trial_options, randomised=True)
@@ -175,7 +226,10 @@ ball_spawn_spread = config[
     "ball_spawn_spread"
 ]  # Margin around fixation where the ball can spawn (smaller = )
 
-itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"], n_trials)
+# Get ITI distribution based on randomly sampled truncated exponential decay
+decay_steepness = 1.0
+# itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"], n_trials)
+itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], config["max_iti"], scale=decay_steepness, size=n_trials)
 
 # Generate a random ITI for each trial
 # itis = np.random.uniform(config["min_iti"], config["max_iti"], n_trials)
@@ -255,7 +309,7 @@ for trial_number, trial in enumerate(trials):
 
     start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = (
         get_pos_and_dirs(
-            avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"]
+            avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
         )
     )
 
@@ -267,6 +321,7 @@ for trial_number, trial in enumerate(trials):
     fixation.draw()
     win.flip()
     # core.wait(2 * timing_factor)  # Fixation display
+    print(f"EXACT Fixation time: {trial_clock.getTime()}s") 
     core.wait(config["fixation_time"])
 
     left_border.draw()
@@ -281,6 +336,7 @@ for trial_number, trial in enumerate(trials):
 
     win.flip()
     # core.wait(2 * timing_factor)  # Fixation + diagonal line display
+    print(f"EXACT interactor time: {trial_clock.getTime()}s") 
     core.wait(config["interactor_time"])
 
     left_border.draw()
@@ -295,6 +351,7 @@ for trial_number, trial in enumerate(trials):
     fixation.draw()
     win.flip()
     # core.wait(1 * timing_factor)  # Occluder display
+    print(f"EXACT occluder time: {trial_clock.getTime()}s") 
     core.wait(config["occluder_time"])
 
     # Ball movement setup
@@ -303,14 +360,11 @@ for trial_number, trial in enumerate(trials):
     velocity = np.array(directions[edge])
 
     bounce = bounces[trial_number]  # 50% chance to bounce
-    rand_bounce_direction = rand_bounce_directions[
-        trial_number
-    ]  # Random 90° phantom bounce direction
-    rand_speed_change = rand_speed_changes[
-        trial_number
-    ]  # 50% chance to slow down or speed up
+    rand_bounce_direction = rand_bounce_directions[trial_number]  # Random 90° phantom bounce direction
+    rand_speed_change = rand_speed_changes[trial_number]  # 50% chance to slow down or speed up
     ball_change = ball_changes[trial_number]  # 20% probability of target ball change
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
+    this_iti = itis[trial_number]  # Random ITI
 
     # ball_change_delay = random.uniform(0, .8)  # Random delay for hue change
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
@@ -330,9 +384,9 @@ for trial_number, trial in enumerate(trials):
     trial_duration = (config["fixation_time"] + 
                       config["interactor_time"] + 
                       config["occluder_time"] + 
-                      config["ballmov_time"] +
-                      config["feedback_time"] + 
-                      config["inter_trial_interval"])
+                      config["ballmov_time"]) # +
+                    #   config["feedback_time"] + 
+                    #   this_iti)
     
     
     print(f"Trial duration = {trial_duration}s") # if verbose else None
@@ -379,13 +433,45 @@ for trial_number, trial in enumerate(trials):
     # Append remaining values
     exp_data["ball_change"].append(ball_change)
     exp_data["start_pos"].append(edge)
-
+    
+    ballmov_time = 0 # MOVE TO BETTER PLACE
+    enter_screen_time = None
+    left_screen_time = None
+    entered_screen = None
     #####################################
+    print(f"EXACT ballmovstart time: {trial_clock.getTime()}s") 
 
     # **BALL MOVEMENT LOOP**
     while trial_clock.getTime() < trial_duration:
         # ball.pos += (velocity * skip_factor) # Update ball position
+        
+        # ball.pos += tuple([velocity[0] * skip_factor, velocity[1] * skip_factor]) # Implement realistic speed decay here as well #old code
+        
+        decay_factor = calculate_decay_factor(this_ball_speed, ballmov_time, trial_duration) # THIS DOESN'T WORK AS OF NOW!!!! IT MESSES UP THE BOUNCES (PHANTOM OR NOT)
+        velocity = [velocity[0] * decay_factor, velocity[1] * decay_factor] # BE SURE TO UNCOMMENT THIS ONCE VALIDATED MY SPEED ONDERZOEK
         ball.pos += tuple([velocity[0] * skip_factor, velocity[1] * skip_factor])
+        
+        # Update elapsed time (assuming you have a way to measure time, e.g., using a clock)
+        ballmov_time += config["frame_rate"]  # time_step should be the time increment per loop iteration
+
+        if (np.linalg.norm(ball.pos) > square_size / 2) and trial_clock.getTime() < (trial_duration // 2):
+            enter_screen_time = trial_clock.getTime()
+            print(f"OUT OF BOUNDS at {trial_clock.getTime():.3f}")
+            entered_screen = True
+        
+        if (entered_screen and 
+            enter_screen_time != None and 
+            left_screen_time == None and
+            trial_clock.getTime() > (trial_duration // 2) and
+            (np.linalg.norm(ball.pos) > square_size // 2)):
+            left_screen_time = trial_clock.getTime()
+            screen_time = left_screen_time - enter_screen_time
+            print(f"LEFT SCREEN AT {left_screen_time:.3f}")
+            print(f"SCREEN TIME: {screen_time:.3f}")
+            
+            
+        latest_speed = np.abs(np.max(velocity))
+        
         if trial_clock.getTime() % 0.5 < 0.02 and verbose:
             print(f"Screen refresh rate: {refreshRate}")  # At 75 Hz in UB singel
             # print(f"Ball direction: {velocity_to_direction(velocity)}")
@@ -393,12 +479,14 @@ for trial_number, trial in enumerate(trials):
         if bounce and check_collision(ball.pos, trial, ball):
             if trial == "45":
                 print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
-                velocity = collide(edge, 45, this_ball_speed)  # Reflect off 45°
+                # velocity = collide(edge, 45, this_ball_speed)  # Reflect off 45°
+                velocity = collide(edge, 45, latest_speed)  # Reflect off 45°
                 bounce_moment = trial_clock.getTime()
 
             elif trial == "135":
                 print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
-                velocity = collide(edge, 135, this_ball_speed)  # Reflect off 135°
+                # velocity = collide(edge, 135, this_ball_speed)  # Reflect off 135°
+                velocity = collide(edge, 135, latest_speed)  # Reflect off 135°
                 bounce_moment = trial_clock.getTime()
 
             bounce = False  # Prevent double bouncing
@@ -419,20 +507,57 @@ for trial_number, trial in enumerate(trials):
         win.flip()
         core.wait(config["frame_rate"])  # Smooth animation, for 60 Hz do (1/60) which is 0.0166667
 
+
+######################################
+        # if (task_choice == "Ball Hiccup" and
+        #     # rand_speed_change == "faster" and
+        #     ball_change and
+        #     not speed_changed and
+        #     np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
+        #     if rand_speed_change == "faster":
+        #         skip_factor = 1.4
+        #     else:
+        #         skip_factor = (1/1.4) ### PROBABLY NEED TO SCALE FOR WHETHER IT BOUNCES OR NOT SO THAT
+        #         # THE RELATIVE DIFFERENCES BETWEEN REALISTIC AND SKIP ARE THE SAME FOR WHEN IT CONTINUES
+        #         # OR WHEN IT BOUNCES, BECAUSE THERE ARE ALREADY INHERENT DIFFERENCES BETWEEN THE TWO
+        #         # SO THE SKIPS BECOME IMPOSSIBLY FAST, AND THE CONTINUOUS ONES HAVE LONGER TIME TO SPEED UP
+        #         # SO THOSE ARE ALSO VERY EASY TO DETECT, WHILE THE SLOWING DOWN IS QUITE DIFFIICULT!!!
+        #         # ALSO LOOK AT A TYPE OF SCALING LAW SO THAT SPEEDING UP IS THE SAME AS SLOWOING DOWN
+        # else:
+        #     skip_factor = 1
+##############################################
         if (task_choice == "Ball Hiccup" and
             # rand_speed_change == "faster" and
             ball_change and
             not speed_changed and
             np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
             if rand_speed_change == "faster":
-                skip_factor = 2
+                if bounces[trial_number]: # original one
+                    print("FAST AND BOUNCY")
+                    skip_factor = 1.8
+                else:
+                    print("FAST AND CONTINUOUS")
+                    skip_factor = 1.4
             else:
-                skip_factor = (1/2)
+                if bounces[trial_number]:
+                    print("SLOW AND BOUNCY")
+                    skip_factor = (1/1.5)
+                else:
+                    print("SLOW AND CONTINUOUS")
+                    skip_factor = (1/1.35)
+                
+                ### PROBABLY NEED TO SCALE FOR WHETHER IT BOUNCES OR NOT SO THAT
+                # THE RELATIVE DIFFERENCES BETWEEN REALISTIC AND SKIP ARE THE SAME FOR WHEN IT CONTINUES
+                # OR WHEN IT BOUNCES, BECAUSE THERE ARE ALREADY INHERENT DIFFERENCES BETWEEN THE TWO
+                # SO THE SKIPS BECOME IMPOSSIBLY FAST, AND THE CONTINUOUS ONES HAVE LONGER TIME TO SPEED UP
+                # SO THOSE ARE ALSO VERY EASY TO DETECT, WHILE THE SLOWING DOWN IS QUITE DIFFIICULT!!!
+                # ALSO LOOK AT A TYPE OF SCALING LAW SO THAT SPEEDING UP IS THE SAME AS SLOWOING DOWN
         else:
             skip_factor = 1
 
         # Stop if the ball is near fixation and bounce is True
-        if np.linalg.norm(ball.pos) <= (config["ball_radius"] // 2):
+        # if np.linalg.norm(ball.pos) <= (config["ball_radius"] // 2): # ORIGINAL PHANTOM BOUNCE POINT
+        if np.linalg.norm(ball.pos) <= (57 - ball_radius + 25): # Computed based on trigonometry, diagonal side of rechte driehoek with 45 45 90 angles and ball_radius as double sides
             if bounce and trial == "none":
                 print("Phantom bounce") if verbose else None
                 if rand_bounce_direction == "left":
@@ -443,7 +568,7 @@ for trial_number, trial in enumerate(trials):
                         else None
                     )
                     velocity = _dir_to_velocity(
-                        _rotate_90(_flip_dir(edge), "left"), this_ball_speed
+                        _rotate_90(_flip_dir(edge), "left"), latest_speed #this_ball_speed # Make sure to adapt this when including the transient decay
                     )  # Reflect off 45°
 
                 elif rand_bounce_direction == "right":
@@ -454,7 +579,7 @@ for trial_number, trial in enumerate(trials):
                         else None
                     )
                     velocity = _dir_to_velocity(
-                        _rotate_90(_flip_dir(edge), "right"), this_ball_speed
+                        _rotate_90(_flip_dir(edge), "right"), latest_speed #this_ball_speed
                     )  # Reflect off 135
 
             bounce_moment = (
@@ -653,7 +778,25 @@ for trial_number, trial in enumerate(trials):
                     -1
                 ] = True  # Meaning that prediction and input agree (SEEMS TO WORK!!)
 
-    if (trial_number + 1) % feedback_freq == 0 and trial_number > 10:
+    # if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
+    #     intermit_data = pd.DataFrame(exp_data)
+    #     this_precision = get_precision(
+    #         intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
+    #     )
+    #     this_sensitivity = get_sensitivity(
+    #         intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
+    #     )
+    #     this_f1 = get_f1_score(
+    #         intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
+    #     )
+    #     # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
+    #     feedback_text = f'Current accuracy: {np.mean((this_precision["simulation"], this_precision["abstraction"])):.2f}% changes detected!'
+    #     # feedback_text = "Theoretical feedback, implement still"
+    # else:
+    #     feedback_text = ""
+        
+    # Example usage in your existing code
+    if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
         this_precision = get_precision(
             intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
@@ -665,8 +808,11 @@ for trial_number, trial in enumerate(trials):
             intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
         )
         # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
-        feedback_text = f'Current accuracy: {np.mean((this_precision["simulation"], this_precision["abstraction"])):.2f}% changes detected!'
+        feedback_text = f'Current accuracy: {(np.mean((this_precision["simulation"], this_precision["abstraction"]))*100):.2f}% changes detected!'
         # feedback_text = "Theoretical feedback, implement still"
+        
+        # Show the break with countdown
+        show_break(win, duration=10)
     else:
         feedback_text = ""
 
