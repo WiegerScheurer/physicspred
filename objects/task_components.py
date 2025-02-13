@@ -55,6 +55,7 @@ ball = visual.Circle(win, radius=ball_radius, fillColor="white", lineColor="whit
 # Calculate the offset
 offset_y = interactor_width / 2
 
+
 ####################################### Defining the interactor lining #####################################
 ############################################### Original ###################################################
 # Define line_45
@@ -141,15 +142,22 @@ def create_interactor(win, width, height, fill_color, line_color, ori, pos):
     rect.pos = pos
     return rect
 
-bounce_dist = get_bounce_dist(ball_radius)
+bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2))
 
 # Define line_45_top and line_45_bottom
-line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist + offset_y), -bounce_dist))
-line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist + offset_y), bounce_dist))
+# line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist + offset_y), -bounce_dist))
+# line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist + offset_y), bounce_dist))
+
+# # Define line_135_top and line_135_bottom
+# line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist + offset_y)))
+# line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist + offset_y)))
+
+line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist), -bounce_dist))
+line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist), bounce_dist))
 
 # Define line_135_top and line_135_bottom
-line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist + offset_y)))
-line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist + offset_y)))
+line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist)))
+line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist)))
 
 
 

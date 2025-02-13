@@ -108,7 +108,6 @@ interactor_width = config["interactor_width"]
 occluder_radius = config["occluder_radius"]
 verbose = config["verbose"]
 exp_parameters = config["exp_parameters"]
-timing_factor = config["timing_factor"]
 feedback_freq = config["feedback_freq"]
 
 exp_data = {par: [] for par in exp_parameters}
@@ -263,6 +262,26 @@ itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], co
 # INTRODUCE NOVEL PROBLEMS.
 
 
+##### DRAW GRID TO ALIGN INTERACTOR WITH
+# Define the grid lines
+line_length = 800  # Length of the lines to cover the window
+line_width = 1  # Width of the lines
+num_lines = 10  # Number of lines on each side of the center
+
+# Create horizontal lines
+horizontal_lines = []
+for i in range(-num_lines, num_lines + 1):
+    y = i * (line_length / (2 * num_lines))
+    horizontal_lines.append(visual.Line(win, start=(-line_length / 2, y), end=(line_length / 2, y), lineWidth=line_width))
+
+# Create vertical lines
+vertical_lines = []
+for i in range(-num_lines, num_lines + 1):
+    x = i * (line_length / (2 * num_lines))
+    vertical_lines.append(visual.Line(win, start=(x, -line_length / 2), end=(x, line_length / 2), lineWidth=line_width))
+################################
+
+
 
 # Define the start and end colors for the subtle hue change
 start_color = np.array([1.0, 1.0, 1.0])  # White
@@ -359,6 +378,9 @@ for trial_number, trial in enumerate(trials):
         line_45_top.draw()
     elif trial[:-2] == "135_bottom":
         line_45_bottom.draw()
+    # Draw the grid
+    for line in horizontal_lines + vertical_lines:
+        line.draw()
     fixation.draw()
 
     win.flip()
@@ -379,6 +401,9 @@ for trial_number, trial in enumerate(trials):
     elif trial[:-2] == "135_bottom":
         line_45_bottom.draw()
     occluder.draw()
+    # Draw the grid
+    for line in horizontal_lines + vertical_lines:
+        line.draw()
     fixation.draw()
     win.flip()
     print(f"EXACT occluder time: {trial_clock.getTime()}s") if verbose else None
@@ -407,6 +432,9 @@ for trial_number, trial in enumerate(trials):
     ball_change = ball_changes[trial_number]  # 20% probability of target ball change
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
     this_iti = itis[trial_number]  # Random ITI
+
+    print(f"Target trial: {ball_change}, Speed change: {rand_speed_change}")
+
 
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
     bounce_moment = None
@@ -561,6 +589,9 @@ for trial_number, trial in enumerate(trials):
         elif trial[:-2] == "135_bottom":
             line_45_bottom.draw()
             
+        # Draw the grid
+        for line in horizontal_lines + vertical_lines:
+            line.draw()
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()
@@ -572,38 +603,17 @@ for trial_number, trial in enumerate(trials):
             not speed_changed and
             np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
             if rand_speed_change == "faster":
-                if bounces[trial_number]: # original one
-                    print("FAST AND BOUNCY")
-                    skip_factor = config["fast_bounce_skip_factor"]
-                else:
-                    print("FAST AND CONTINUOUS")
-                    skip_factor = config["fast_bounce_skip_factor"]
+                skip_factor = config["fast_bounce_skip_factor"]
+                # if bounces[trial_number]: # original one
+                #     skip_factor = config["fast_bounce_skip_factor"]
             else:
-                if bounces[trial_number]:
-                    print("SLOW AND BOUNCY")
-                    skip_factor = (1/config["slow_bounce_skip_factor"])
-                else:
-                    print("SLOW AND CONTINUOUS")
-                    skip_factor = (1/config["slow_bounce_skip_factor"])
-                
-                ### PROBABLY NEED TO SCALE FOR WHETHER IT BOUNCES OR NOT SO THAT
-                # THE RELATIVE DIFFERENCES BETWEEN REALISTIC AND SKIP ARE THE SAME FOR WHEN IT CONTINUES
-                # OR WHEN IT BOUNCES, BECAUSE THERE ARE ALREADY INHERENT DIFFERENCES BETWEEN THE TWO
-                # SO THE SKIPS BECOME IMPOSSIBLY FAST, AND THE CONTINUOUS ONES HAVE LONGER TIME TO SPEED UP
-                # SO THOSE ARE ALSO VERY EASY TO DETECT, WHILE THE SLOWING DOWN IS QUITE DIFFIICULT!!!
-                # ALSO LOOK AT A TYPE OF SCALING LAW SO THAT SPEEDING UP IS THE SAME AS SLOWOING DOWN
+                skip_factor = (1/config["slow_bounce_skip_factor"])
+                # if bounces[trial_number]:
+                    # skip_factor = (1/config["slow_bounce_skip_factor"])
+
         else:
             skip_factor = 1
 
-        # Stop if the ball is near fixation and bounce is True
-        # if np.linalg.norm(ball.pos) <= (config["ball_radius"] // 2): # ORIGINAL PHANTOM BOUNCE POINT
-        
-        ##### Fix this code with the get_bounce_dist function, but now not necessary actually
-        # sterker nog, moet gewoon op fixation punt zijn ivm nieuwe interactor locaties
-        # if np.linalg.norm(ball.pos) <= (57 - ball_radius + 25): # 25 Computed based on trigonometry, diagonal side of rechte driehoek with 45 45 90 angles and ball_radius as double sides
-        # if np.linalg.norm(ball.pos) <= 0: # Bounce at fixation
-        ################ PHANTOM BOUNZZZZZZZZ ################
-        # if np.sum(np.abs(ball.pos)) < 2:
         if will_cross_fixation(ball.pos, velocity, skip_factor):
 
             if bounce and trial[:4] == "none":
@@ -619,7 +629,7 @@ for trial_number, trial in enumerate(trials):
                         else None
                     )
                     velocity = _dir_to_velocity(
-                        _rotate_90(_flip_dir(edge), "left"), pre_bounce_velocity #this_ball_speed # Make sure to adapt this when including the transient decay
+                        _rotate_90(_flip_dir(edge), "left"), pre_bounce_velocity 
                     )  # Reflect off 45°
 
                 elif rand_bounce_direction == "right":
@@ -630,7 +640,7 @@ for trial_number, trial in enumerate(trials):
                         else None
                     )
                     velocity = _dir_to_velocity(
-                        _rotate_90(_flip_dir(edge), "right"), pre_bounce_velocity #this_ball_speed
+                        _rotate_90(_flip_dir(edge), "right"), pre_bounce_velocity 
                     )  # Reflect off 135
             elif not bounce:
                 bounce_moment = (
