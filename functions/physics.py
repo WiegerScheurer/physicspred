@@ -277,3 +277,21 @@ def get_dist_dif(ball_radius):
         float: The the less distance traveled by the bouncing ball.
     """
     return np.cos(np.deg2rad(45)) * ball_radius
+##### DOES THE EXACT SAME AS BELOW, BUT WITH TRIGONOMETRIC FUNCTIONS#####
+def get_bounce_dist(ball_radius):
+    """Compute the horizontal/vertical distance from ball center to 
+    contactpoint of the interactor. These are the two right sides of 
+    the triangle, where the diagonal is the ball radius.
+    N.B.: As the triangle is an isosceles (gelijkbenig) triangle, the two 
+    sides are equal.
+    N.B.: As the angle is 45 degrees, we can just use the eenheidscirkel
+    coordinates for 45 degrees = (sqrt(2) / 2)
+    
+
+    Args:
+        ball_radius (float): radius of the ball
+
+    Returns:
+        float: the contactpoint coordinates between ball and interactor.
+    """        
+    return ball_radius * (np.sqrt(2) / 2)

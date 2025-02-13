@@ -145,12 +145,21 @@ from objects.task_components import (
     right_border,
     top_border,
     bottom_border,
-    line_45,
-    line_135,
+    line_45_top,
+    line_45_bottom,
+    line_135_top,
+    line_135_bottom,
     occluder,
     occluder_glass,
     fixation,
 )
+
+line_map = {
+    "45_top":       line_45_top,
+    "45_bottom":    line_45_bottom,
+    "135_top":      line_135_top,
+    "135_bottom":   line_135_bottom,
+}
 
 win_dims = win.size
 
@@ -192,8 +201,13 @@ square_size = config["square_size"]
 skip_factor = 1
 n_trials = config["n_trials"]  # Number of trials
 
-# Define the options for trial parameters
-trial_options = ["45", "135", "none"]
+# Define the options for trial parameters # Annoyingly enough I use top and bottom for interactor location
+# But up and down for ball start location, because those align with arrow button registered keys
+# does align with bottom-up and top-down nomenclature (going up; to the top; going down; to the bottom)
+trial_options = ["45_top_l", "45_top_d",
+                 "45_bottom_r", "45_bottom_u",
+                 "135_top_r", "135_top_d",
+                 "135_bottom_l", "135_bottom_u"] + 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
 edge_options = ["up", "down", "left", "right"]
 bounce_options = [True, False]
 rand_bounce_direction_options = ["left", "right"]
@@ -211,7 +225,7 @@ ball_speed_options = [avg_ball_speed] * 2
 
 # Create deterministically randomised; balanced parameter sequences
 trials = determine_sequence(n_trials, trial_options, randomised=True)
-edges = determine_sequence(n_trials, edge_options, randomised=True)
+# edges = determine_sequence(n_trials, edge_options, randomised=True)
 bounces = determine_sequence(n_trials, bounce_options, randomised=True)
 rand_bounce_directions = determine_sequence(
     n_trials, rand_bounce_direction_options, randomised=True
@@ -320,7 +334,6 @@ for trial_number, trial in enumerate(trials):
     refreshInformation.setAutoDraw(True)
     fixation.draw()
     win.flip()
-    # core.wait(2 * timing_factor)  # Fixation display
     print(f"EXACT Fixation time: {trial_clock.getTime()}s") 
     core.wait(config["fixation_time"])
 
@@ -328,34 +341,32 @@ for trial_number, trial in enumerate(trials):
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
-    if trial == "45":
-        line_45.draw()
-    elif trial == "135":
-        line_135.draw()
+    if trial in line_map: # Draw interactor line
+        line_map[trial].draw()
     fixation.draw()
 
     win.flip()
-    # core.wait(2 * timing_factor)  # Fixation + diagonal line display
     print(f"EXACT interactor time: {trial_clock.getTime()}s") 
     core.wait(config["interactor_time"])
 
     left_border.draw()
     right_border.draw()
     top_border.draw()
-    bottom_border.draw()
-    if trial == "45":
-        line_45.draw()
-    elif trial == "135":
-        line_135.draw()
-    occluder.draw() # if occluder_opaque else occluder_glass.draw()
+    bottom_border.draw()    
+    if trial in line_map: # Draw interactor line
+        line_map[trial].draw()
+    occluder.draw()
     fixation.draw()
     win.flip()
-    # core.wait(1 * timing_factor)  # Occluder display
     print(f"EXACT occluder time: {trial_clock.getTime()}s") 
     core.wait(config["occluder_time"])
 
     # Ball movement setup
-    edge = edges[trial_number]  # Ball start position
+    edge_letter = trial.split("_")[]  # Ball start position
+
+    # Find the full edge option string
+    edge = next(option for option in edge_options if option.startswith(edge_letter))
+
     ball.pos = np.array(start_positions[edge])
     velocity = np.array(directions[edge])
 
@@ -366,7 +377,6 @@ for trial_number, trial in enumerate(trials):
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
     this_iti = itis[trial_number]  # Random ITI
 
-    # ball_change_delay = random.uniform(0, .8)  # Random delay for hue change
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
     bounce_moment = None
     bounced_at = None
@@ -502,34 +512,12 @@ for trial_number, trial in enumerate(trials):
         right_border.draw()
         top_border.draw()
         bottom_border.draw()
-        if trial == "45":
-            line_45.draw()
-        elif trial == "135":
-            line_135.draw()
+        if trial in line_map: # Draw interactor line
+            line_map[trial].draw()
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()
         core.wait(config["frame_rate"])  # Smooth animation, for 60 Hz do (1/60) which is 0.0166667
-
-
-######################################
-        # if (task_choice == "Ball Hiccup" and
-        #     # rand_speed_change == "faster" and
-        #     ball_change and
-        #     not speed_changed and
-        #     np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
-        #     if rand_speed_change == "faster":
-        #         skip_factor = 1.4
-        #     else:
-        #         skip_factor = (1/1.4) ### PROBABLY NEED TO SCALE FOR WHETHER IT BOUNCES OR NOT SO THAT
-        #         # THE RELATIVE DIFFERENCES BETWEEN REALISTIC AND SKIP ARE THE SAME FOR WHEN IT CONTINUES
-        #         # OR WHEN IT BOUNCES, BECAUSE THERE ARE ALREADY INHERENT DIFFERENCES BETWEEN THE TWO
-        #         # SO THE SKIPS BECOME IMPOSSIBLY FAST, AND THE CONTINUOUS ONES HAVE LONGER TIME TO SPEED UP
-        #         # SO THOSE ARE ALSO VERY EASY TO DETECT, WHILE THE SLOWING DOWN IS QUITE DIFFIICULT!!!
-        #         # ALSO LOOK AT A TYPE OF SCALING LAW SO THAT SPEEDING UP IS THE SAME AS SLOWOING DOWN
-        # else:
-        #     skip_factor = 1
-##############################################
 
         if (task_choice == "Ball Hiccup" and
             # rand_speed_change == "faster" and
@@ -562,6 +550,9 @@ for trial_number, trial in enumerate(trials):
 
         # Stop if the ball is near fixation and bounce is True
         # if np.linalg.norm(ball.pos) <= (config["ball_radius"] // 2): # ORIGINAL PHANTOM BOUNCE POINT
+        
+        ##### Fix this code with the get_bounce_dist function, but now not necessary actually
+        # sterker nog, moet gewoon op fixation punt zijn ivm nieuwe interactor locaties
         if np.linalg.norm(ball.pos) <= (57 - ball_radius + 25): # 25 Computed based on trigonometry, diagonal side of rechte driehoek with 45 45 90 angles and ball_radius as double sides
             if bounce and trial == "none":
                 print("Phantom bounce") if verbose else None
@@ -669,7 +660,6 @@ for trial_number, trial in enumerate(trials):
         )  # Check whether the ball hasn't just continued
         exp_data["end_pos"][-1] = ball_direction  # log end position
 
-        # toetsen = event.getKeys(['space', 'left', 'right', 'up', 'down'])
         toetsen = event.getKeys(
             ["space", "left", "right", "up", "down", "escape", "r", "o"]
         )  # Construction set
@@ -757,10 +747,6 @@ for trial_number, trial in enumerate(trials):
                 feedback_text = ""
                 correct_response = None
                 print(feedback_text)
-                # if not responded and ball_change:
-                #     # SOMETHING IS VERY WRONG HERRE WTF
-                #     feedback_text = f"Undetected ball change, it was a {rand_speed_change} {ball_direction} ward ball"
-                #     correct_response = False
 
         exp_data["accuracy"][
             -1
@@ -782,23 +768,6 @@ for trial_number, trial in enumerate(trials):
                 exp_data[f"{hypothesis}_congruent"][
                     -1
                 ] = True  # Meaning that prediction and input agree (SEEMS TO WORK!!)
-
-    # if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
-    #     intermit_data = pd.DataFrame(exp_data)
-    #     this_precision = get_precision(
-    #         intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-    #     )
-    #     this_sensitivity = get_sensitivity(
-    #         intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-    #     )
-    #     this_f1 = get_f1_score(
-    #         intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-    #     )
-    #     # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
-    #     feedback_text = f'Current accuracy: {np.mean((this_precision["simulation"], this_precision["abstraction"])):.2f}% changes detected!'
-    #     # feedback_text = "Theoretical feedback, implement still"
-    # else:
-    #     feedback_text = ""
         
     # Example usage in your existing code
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
@@ -831,7 +800,6 @@ for trial_number, trial in enumerate(trials):
     feedback.draw()
     fixation.draw()
     win.flip()
-    # core.wait(2 * timing_factor) # Time for feedback
     core.wait(config["feedback_time"])
 
     # Reset ball and fixation color to original after each trial

@@ -1,7 +1,7 @@
 # win_dims: [1920, 1080]
 # win_dims: [3840, 2160]
 avg_ball_speed: 6
-natural_speed_variance: 0 #.5
+natural_speed_variance: .5
 timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
 ball_radius: 40 
 # square_size: 1440 # The size of the square ball experiment screen (manually set now)
@@ -31,8 +31,8 @@ target_baserate: .25 #.25 # Frequency of target trials. 1 means 1:0, .25 is 1:3,
 # Timing parameters:
 frame_rate: 0.016666666666 #0.01 is about 75 Hz 66666 # 60 Hz; 1/60
 fixation_time: .5
-interactor_time: 3
-occluder_time: 1
+interactor_time: 1
+occluder_time: .5
 ballmov_time: 7 #4.2222 #7
 feedback_time: 1
 mean_iti: 2
