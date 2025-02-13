@@ -82,7 +82,7 @@ def show_break(win, duration=10):
 
 # Function to calculate the decay factor
 def calculate_decay_factor(start_speed, elapsed_time, total_time):
-    constant = 0.007/6 # Based on what my eyes see as a realistic decay
+    constant = 0.01/6 # Based on what my eyes see as a realistic decay
     # constant = 1
     decay_rate = start_speed * constant  # Adjust this value to control the rate of decay
     return np.exp(-decay_rate * (elapsed_time / total_time))
@@ -420,6 +420,7 @@ for trial_number, trial in enumerate(trials):
     occluder_exit_moment = None
     hue_changed = False
     hue_changed_back = False
+    pre_bounce_velocity = None
     
     trial_duration = (config["fixation_time"] + 
                       config["interactor_time"] + 
@@ -490,7 +491,7 @@ for trial_number, trial in enumerate(trials):
         decay_factor = calculate_decay_factor(this_ball_speed, ballmov_time, trial_duration) # THIS DOESN'T WORK AS OF NOW!!!! IT MESSES UP THE BOUNCES (PHANTOM OR NOT)
         velocity = [velocity[0] * decay_factor, velocity[1] * decay_factor] # BE SURE TO UNCOMMENT THIS ONCE VALIDATED MY SPEED ONDERZOEK
         ball.pos += tuple([velocity[0] * skip_factor, velocity[1] * skip_factor])
-        
+
         
         
         # Update elapsed time (assuming you have a way to measure time, e.g., using a clock)
@@ -512,7 +513,7 @@ for trial_number, trial in enumerate(trials):
             print(f"SCREEN TIME: {screen_time:.3f}")
             
             
-        latest_speed = avg_ball_speed # np.abs(np.max(velocity)) #############
+        # latest_speed = avg_ball_speed # np.abs(np.max(velocity)) #############
         
         if trial_clock.getTime() % 0.5 < 0.02 and verbose:
             print(f"Screen refresh rate: {refreshRate}")  # At 75 Hz in UB singel
@@ -521,16 +522,12 @@ for trial_number, trial in enumerate(trials):
             # print(f"Ball direction: {velocity_to_direction(velocity)}")
             
         #################### NORMAL BOUNZZZZZ ####################
-        # Check for bounce
-        # if bounce and np.sum(np.abs(ball.pos)) < 2:
         if will_cross_fixation(ball.pos, velocity, skip_factor) and bounce and trial[:4] != "none":
-            print("NOU MOET IE STUUUUTEREN")
-        
-        # np.linalg.norm(ball.pos) < 5: #check_collision(ball.pos, trial, ball):
+            pre_bounce_velocity = np.max(np.abs(velocity)) if pre_bounce_velocity == None else pre_bounce_velocity
             if trial[:2] == "45":
                 print(f"BOUNCED on 45 at {trial_clock.getTime()}") #if verbose else None
                 # velocity = collide(edge, 45, this_ball_speed)  # Reflect off 45°
-                velocity = collide(_flip_dir(edge), 45, latest_speed)  # Reflect off 45°
+                velocity = collide(_flip_dir(edge), 45, pre_bounce_velocity)  # Reflect off 45°
                 # new_dir = _bounce_ball((edge), trial[:2], str_or_tuple_out="tuple")
                 # velocity = [d_dist * latest_speed for d_dist in new_dir]
                 bounce_moment = trial_clock.getTime()
@@ -538,7 +535,7 @@ for trial_number, trial in enumerate(trials):
             elif trial[:3] == "135":
                 print(f"BOUNCED on 135 at {trial_clock.getTime()}") #if verbose else None
                 # velocity = collide(edge, 135, this_ball_speed)  # Reflect off 135°
-                velocity = collide(_flip_dir(edge), 135, latest_speed)  # Reflect off 135°
+                velocity = collide(_flip_dir(edge), 135, pre_bounce_velocity)  # Reflect off 135°
                 # new_dir = _bounce_ball((edge), trial[:3], str_or_tuple_out="tuple")
                 # velocity = [d_dist * latest_speed for d_dist in new_dir]
                 bounce_moment = trial_clock.getTime()
@@ -577,17 +574,17 @@ for trial_number, trial in enumerate(trials):
             if rand_speed_change == "faster":
                 if bounces[trial_number]: # original one
                     print("FAST AND BOUNCY")
-                    skip_factor = 1.8
+                    skip_factor = config["fast_bounce_skip_factor"]
                 else:
                     print("FAST AND CONTINUOUS")
-                    skip_factor = 1.4
+                    skip_factor = config["fast_bounce_skip_factor"]
             else:
                 if bounces[trial_number]:
                     print("SLOW AND BOUNCY")
-                    skip_factor = (1/1.5)
+                    skip_factor = (1/config["slow_bounce_skip_factor"])
                 else:
                     print("SLOW AND CONTINUOUS")
-                    skip_factor = (1/1.35)
+                    skip_factor = (1/config["slow_bounce_skip_factor"])
                 
                 ### PROBABLY NEED TO SCALE FOR WHETHER IT BOUNCES OR NOT SO THAT
                 # THE RELATIVE DIFFERENCES BETWEEN REALISTIC AND SKIP ARE THE SAME FOR WHEN IT CONTINUES
@@ -608,7 +605,10 @@ for trial_number, trial in enumerate(trials):
         ################ PHANTOM BOUNZZZZZZZZ ################
         # if np.sum(np.abs(ball.pos)) < 2:
         if will_cross_fixation(ball.pos, velocity, skip_factor):
+
             if bounce and trial[:4] == "none":
+                pre_bounce_velocity = np.max(np.abs(velocity)) if pre_bounce_velocity == None else pre_bounce_velocity
+
                 print("FENTOM BAUNZZZZZ")
                 print("Phantom bounce") if verbose else None
                 if rand_bounce_direction == "left":
@@ -619,7 +619,7 @@ for trial_number, trial in enumerate(trials):
                         else None
                     )
                     velocity = _dir_to_velocity(
-                        _rotate_90(_flip_dir(edge), "left"), latest_speed #this_ball_speed # Make sure to adapt this when including the transient decay
+                        _rotate_90(_flip_dir(edge), "left"), pre_bounce_velocity #this_ball_speed # Make sure to adapt this when including the transient decay
                     )  # Reflect off 45°
 
                 elif rand_bounce_direction == "right":
@@ -630,7 +630,7 @@ for trial_number, trial in enumerate(trials):
                         else None
                     )
                     velocity = _dir_to_velocity(
-                        _rotate_90(_flip_dir(edge), "right"), latest_speed #this_ball_speed
+                        _rotate_90(_flip_dir(edge), "right"), pre_bounce_velocity #this_ball_speed
                     )  # Reflect off 135
             elif not bounce:
                 bounce_moment = (

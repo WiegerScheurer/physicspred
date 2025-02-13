@@ -14,7 +14,11 @@ def check_collision(ball_pos, line_angle, ball):
 
 
 def collide(start_direction: str, line_angle: int, ball_speed: float):
-    """Returns the new direction vector of the ball after a collision."""
+    """Returns the new direction vector of the ball after a collision.
+    
+    N.B.: Start direction is the direction the ball is moving towards, 
+    so not the start location of the ball.
+    """
     direction_angles = {
         "up": 270,
         "down": 90,
