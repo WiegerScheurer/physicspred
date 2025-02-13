@@ -41,6 +41,8 @@ from functions.physics import (
     _rotate_90,
     _dir_to_velocity,
     velocity_to_direction,
+    will_cross_fixation,
+    _bounce_ball,
 )
 from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score
 
@@ -204,16 +206,21 @@ n_trials = config["n_trials"]  # Number of trials
 # Define the options for trial parameters # Annoyingly enough I use top and bottom for interactor location
 # But up and down for ball start location, because those align with arrow button registered keys
 # does align with bottom-up and top-down nomenclature (going up; to the top; going down; to the bottom)
-trial_options = ["45_top_l", "45_top_d",
-                 "45_bottom_r", "45_bottom_u",
-                 "135_top_r", "135_top_d",
-                 "135_bottom_l", "135_bottom_u"] + 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
+
+# Equal occurrence frequency of interactor 45, 135 and "none", balanced for ball start location
+trial_options = ["45_top_r", "45_top_u",
+                 "45_bottom_l", "45_bottom_d",
+                 "135_top_l", "135_top_u",
+                 "135_bottom_r", "135_bottom_d"] + [f"none_{edge}" for edge in ["l", "r", "u", "d"]]
+# 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
 edge_options = ["up", "down", "left", "right"]
 bounce_options = [True, False]
 rand_bounce_direction_options = ["left", "right"]
 ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
 rand_speed_change_options = ["slower", "faster"]
 natural_speed_variance = config["natural_speed_variance"]
+
+
 # ball_speed_options = list(
 #     np.arange(
 #         avg_ball_speed - natural_speed_variance,
@@ -221,7 +228,8 @@ natural_speed_variance = config["natural_speed_variance"]
 #         natural_speed_variance,
 #     )
 # )
-ball_speed_options = [avg_ball_speed] * 2
+
+ball_speed_options = [avg_ball_speed] * 2 # Revert this to code above EVENTUALLY
 
 # Create deterministically randomised; balanced parameter sequences
 trials = determine_sequence(n_trials, trial_options, randomised=True)
@@ -327,6 +335,7 @@ for trial_number, trial in enumerate(trials):
         )
     )
 
+    ########### DRAW FIXATION CROSS ###########
     left_border.draw()
     right_border.draw()
     top_border.draw()
@@ -334,38 +343,60 @@ for trial_number, trial in enumerate(trials):
     refreshInformation.setAutoDraw(True)
     fixation.draw()
     win.flip()
-    print(f"EXACT Fixation time: {trial_clock.getTime()}s") 
+    print(f"EXACT Fixation time: {trial_clock.getTime()}s") if verbose else None
     core.wait(config["fixation_time"])
 
+    ########### DRAW INTERACTOR LINE ###########
     left_border.draw()
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
-    if trial in line_map: # Draw interactor line
-        line_map[trial].draw()
+    if trial[:-2] == "45_top":
+        line_135_top.draw()
+    elif trial[:-2] == "45_bottom":
+        line_135_bottom.draw()
+    elif trial[:-2] == "135_top":
+        line_45_top.draw()
+    elif trial[:-2] == "135_bottom":
+        line_45_bottom.draw()
     fixation.draw()
 
     win.flip()
-    print(f"EXACT interactor time: {trial_clock.getTime()}s") 
+    print(f"EXACT interactor time: {trial_clock.getTime()}s") if verbose else None
     core.wait(config["interactor_time"])
 
+    ########### DRAW OCCLUDER ###########
     left_border.draw()
     right_border.draw()
     top_border.draw()
     bottom_border.draw()    
-    if trial in line_map: # Draw interactor line
-        line_map[trial].draw()
+    if trial[:-2] == "45_top":
+        line_135_top.draw()
+    elif trial[:-2] == "45_bottom":
+        line_135_bottom.draw()
+    elif trial[:-2] == "135_top":
+        line_45_top.draw()
+    elif trial[:-2] == "135_bottom":
+        line_45_bottom.draw()
     occluder.draw()
     fixation.draw()
     win.flip()
-    print(f"EXACT occluder time: {trial_clock.getTime()}s") 
+    print(f"EXACT occluder time: {trial_clock.getTime()}s") if verbose else None
     core.wait(config["occluder_time"])
 
-    # Ball movement setup
-    edge_letter = trial.split("_")[]  # Ball start position
-
+    # Extract start position letter from trial name
+    if trial[:4] == "none":
+        edge_letter = trial[-1]
+    else:
+        edge_letter = trial.split("_")[2]
+        
     # Find the full edge option string
-    edge = next(option for option in edge_options if option.startswith(edge_letter))
+    edge = _flip_dir(next(option for option in edge_options if option.startswith(edge_letter)))
+
+    print(f"Trial: {trial}")
+    print(f"Edge letter: {edge_letter}")
+    print(f"Actual edge: {edge}")
+    print(f"Ball will bounce: {bounces[trial_number]}")
 
     ball.pos = np.array(start_positions[edge])
     velocity = np.array(directions[edge])
@@ -389,8 +420,7 @@ for trial_number, trial in enumerate(trials):
     occluder_exit_moment = None
     hue_changed = False
     hue_changed_back = False
-    # trial_duration = win_dims[1] // (800 / 10) #  13 seconds now, scales with screensize, ideally (NO should be same, the rest should scale)
-    # trial_duration = square_size // (800 / 10) * timing_factor ### TODO: MAAK SOM VAN core.wait() elementen en de rest
+    
     trial_duration = (config["fixation_time"] + 
                       config["interactor_time"] + 
                       config["occluder_time"] + 
@@ -432,7 +462,7 @@ for trial_number, trial in enumerate(trials):
 
     # Conditional appends
     exp_data["random_bounce_direction"].append(
-        rand_bounce_direction if bounce and trial == "none" else None
+        rand_bounce_direction if bounce and trial[:4] == "none" else None # CHANGED HERE
     )
     exp_data["speed_change"].append(
         rand_speed_change
@@ -489,18 +519,28 @@ for trial_number, trial in enumerate(trials):
             # latest_speed = np.abs(np.max(velocity)) #############
 
             # print(f"Ball direction: {velocity_to_direction(velocity)}")
+            
+        #################### NORMAL BOUNZZZZZ ####################
         # Check for bounce
-        if bounce and check_collision(ball.pos, trial, ball):
-            if trial == "45":
-                print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
+        # if bounce and np.sum(np.abs(ball.pos)) < 2:
+        if will_cross_fixation(ball.pos, velocity, skip_factor) and bounce and trial[:4] != "none":
+            print("NOU MOET IE STUUUUTEREN")
+        
+        # np.linalg.norm(ball.pos) < 5: #check_collision(ball.pos, trial, ball):
+            if trial[:2] == "45":
+                print(f"BOUNCED on 45 at {trial_clock.getTime()}") #if verbose else None
                 # velocity = collide(edge, 45, this_ball_speed)  # Reflect off 45°
-                velocity = collide(edge, 45, latest_speed)  # Reflect off 45°
+                velocity = collide(_flip_dir(edge), 45, latest_speed)  # Reflect off 45°
+                # new_dir = _bounce_ball((edge), trial[:2], str_or_tuple_out="tuple")
+                # velocity = [d_dist * latest_speed for d_dist in new_dir]
                 bounce_moment = trial_clock.getTime()
 
-            elif trial == "135":
-                print(f"BOUNCED at {trial_clock.getTime()}") if verbose else None
+            elif trial[:3] == "135":
+                print(f"BOUNCED on 135 at {trial_clock.getTime()}") #if verbose else None
                 # velocity = collide(edge, 135, this_ball_speed)  # Reflect off 135°
-                velocity = collide(edge, 135, latest_speed)  # Reflect off 135°
+                velocity = collide(_flip_dir(edge), 135, latest_speed)  # Reflect off 135°
+                # new_dir = _bounce_ball((edge), trial[:3], str_or_tuple_out="tuple")
+                # velocity = [d_dist * latest_speed for d_dist in new_dir]
                 bounce_moment = trial_clock.getTime()
 
             bounce = False  # Prevent double bouncing
@@ -512,8 +552,18 @@ for trial_number, trial in enumerate(trials):
         right_border.draw()
         top_border.draw()
         bottom_border.draw()
-        if trial in line_map: # Draw interactor line
-            line_map[trial].draw()
+        # if trial in line_map: # Draw interactor line
+        #     line_map[trial].draw()
+        
+        if trial[:-2] == "45_top":
+            line_135_top.draw()
+        elif trial[:-2] == "45_bottom":
+            line_135_bottom.draw()
+        elif trial[:-2] == "135_top":
+            line_45_top.draw()
+        elif trial[:-2] == "135_bottom":
+            line_45_bottom.draw()
+            
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()
@@ -553,8 +603,13 @@ for trial_number, trial in enumerate(trials):
         
         ##### Fix this code with the get_bounce_dist function, but now not necessary actually
         # sterker nog, moet gewoon op fixation punt zijn ivm nieuwe interactor locaties
-        if np.linalg.norm(ball.pos) <= (57 - ball_radius + 25): # 25 Computed based on trigonometry, diagonal side of rechte driehoek with 45 45 90 angles and ball_radius as double sides
-            if bounce and trial == "none":
+        # if np.linalg.norm(ball.pos) <= (57 - ball_radius + 25): # 25 Computed based on trigonometry, diagonal side of rechte driehoek with 45 45 90 angles and ball_radius as double sides
+        # if np.linalg.norm(ball.pos) <= 0: # Bounce at fixation
+        ################ PHANTOM BOUNZZZZZZZZ ################
+        # if np.sum(np.abs(ball.pos)) < 2:
+        if will_cross_fixation(ball.pos, velocity, skip_factor):
+            if bounce and trial[:4] == "none":
+                print("FENTOM BAUNZZZZZ")
                 print("Phantom bounce") if verbose else None
                 if rand_bounce_direction == "left":
 
@@ -577,13 +632,13 @@ for trial_number, trial in enumerate(trials):
                     velocity = _dir_to_velocity(
                         _rotate_90(_flip_dir(edge), "right"), latest_speed #this_ball_speed
                     )  # Reflect off 135
-
-            bounce_moment = (
-                trial_clock.getTime()
-            )  # if bounce_moment == None else bounce_moment # MAYBE WILL DO THE TRICK
-            bounce = False
-            crossed_fixation = True
-            print(f"crossed fixation at {trial_clock.getTime()}") if verbose else None
+            elif not bounce:
+                bounce_moment = (
+                    trial_clock.getTime()
+                )  # if bounce_moment == None else bounce_moment # MAYBE WILL DO THE TRICK
+                bounce = False
+                crossed_fixation = True
+                print(f"crossed fixation at {trial_clock.getTime()}") if verbose else None
 
 
         # Check if ball is about to leave occluder

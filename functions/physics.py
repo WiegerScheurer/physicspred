@@ -2,14 +2,16 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
+# Probably deprecated
 def check_collision(ball_pos, line_angle, ball):
     """Returns True if the ball's edge intersects the diagonal line."""
     x, y = ball_pos
-    if line_angle == "45":  
-        return abs(y - x) <= ball.radius  # Ball touches y = x
-    elif line_angle == "135":
-        return abs(y + x) <= ball.radius  # Ball touches y = -x
+    if line_angle[:2] == "45":  
+        return abs(y - x) <= 0 # ball.radius  # Ball touches y = x
+    elif line_angle[:3] == "135":
+        return abs(y + x) <= 0 # ball.radius  # Ball touches y = -x
     return False  # No line
+
 
 def collide(start_direction: str, line_angle: int, ball_speed: float):
     """Returns the new direction vector of the ball after a collision."""
@@ -39,6 +41,16 @@ def collide(start_direction: str, line_angle: int, ball_speed: float):
     )
     
     return new_direction
+
+def will_cross_fixation(ball_pos, velocity, skip_factor):
+    # Calculate the next position
+    next_pos = ball_pos + np.array([velocity[0] * skip_factor, velocity[1] * skip_factor])    
+    
+    # Check if the line segment between ball_pos and next_pos crosses the (0, 0) point
+    # This can be done by checking if the signs of the coordinates change
+    if (np.sign(ball_pos[0]) != np.sign(next_pos[0]) or np.sign(ball_pos[1]) != np.sign(next_pos[1])):
+        return True
+    return False
 
 def compute_speed(direction_vector):
     """Computes the speed from the direction vector."""
@@ -166,7 +178,33 @@ def _flip_dir(direction: str | tuple) -> str | tuple:
     
     return flipped_dir
 
-def _bounce_ball(start_direction: str, interactor: str):
+# def _bounce_ball(start_direction: str, interactor: str):
+#     """
+#     Bounces a ball based on the start direction and the type of interactor.
+
+#     Parameters:
+#     start_direction (str): The initial direction of the ball.
+#     interactor (str): The type of interactor.
+
+#     Returns:
+#     str: The new direction of the ball after bouncing.
+
+#     """
+
+#     if interactor == "45":
+#         relative_direction = "left" if start_direction in ["right", "left"] else "right"
+#         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
+#     elif interactor == "135":
+#         relative_direction = "left" if start_direction in ["up", "down"] else "right"
+#         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
+#     else:
+#         end_loc = _dir_to_vec(start_direction) # When no interactor, ball ends up in the same direction
+        
+#     end_direction = _flip_dir(end_loc)
+    
+#     return _vec_to_dir(end_direction)
+
+def _bounce_ball(start_direction: str, interactor: str, str_or_tuple_out:str = "str"):
     """
     Bounces a ball based on the start direction and the type of interactor.
 
@@ -190,7 +228,7 @@ def _bounce_ball(start_direction: str, interactor: str):
         
     end_direction = _flip_dir(end_loc)
     
-    return _vec_to_dir(end_direction)
+    return end_direction if str_or_tuple_out == "tuple" else _vec_to_dir(end_direction)
 
 def plot_positions(start_pos, end_pos, pred_to_input, interactor):
     positions = {"up": (0, 1), "right": (1, 0), "down": (0, -1), "left": (-1, 0)}
