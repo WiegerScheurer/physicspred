@@ -129,7 +129,6 @@ expInfo = {
     "feedback": ["No", "Yes"],
 }
 
-
 give_feedback = True if expInfo["feedback"] == "Yes" else False
 # --- Show participant info dialog --
 dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
@@ -151,8 +150,9 @@ from objects.task_components import (
     line_135_top,
     line_135_bottom,
     occluder,
-    occluder_glass,
     fixation,
+    horizontal_lines,
+    vertical_lines,
 )
 
 line_map = {
@@ -262,24 +262,6 @@ itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], co
 # INTRODUCE NOVEL PROBLEMS.
 
 
-##### DRAW GRID TO ALIGN INTERACTOR WITH
-# Define the grid lines
-line_length = 800  # Length of the lines to cover the window
-line_width = 1  # Width of the lines
-num_lines = 10  # Number of lines on each side of the center
-
-# Create horizontal lines
-horizontal_lines = []
-for i in range(-num_lines, num_lines + 1):
-    y = i * (line_length / (2 * num_lines))
-    horizontal_lines.append(visual.Line(win, start=(-line_length / 2, y), end=(line_length / 2, y), lineWidth=line_width))
-
-# Create vertical lines
-vertical_lines = []
-for i in range(-num_lines, num_lines + 1):
-    x = i * (line_length / (2 * num_lines))
-    vertical_lines.append(visual.Line(win, start=(x, -line_length / 2), end=(x, line_length / 2), lineWidth=line_width))
-################################
 
 
 
@@ -378,9 +360,9 @@ for trial_number, trial in enumerate(trials):
         line_45_top.draw()
     elif trial[:-2] == "135_bottom":
         line_45_bottom.draw()
-    # Draw the grid
-    for line in horizontal_lines + vertical_lines:
-        line.draw()
+    if config["draw_grid"]:
+        for line in horizontal_lines + vertical_lines:
+            line.draw()
     fixation.draw()
 
     win.flip()
@@ -401,9 +383,9 @@ for trial_number, trial in enumerate(trials):
     elif trial[:-2] == "135_bottom":
         line_45_bottom.draw()
     occluder.draw()
-    # Draw the grid
-    for line in horizontal_lines + vertical_lines:
-        line.draw()
+    if config["draw_grid"]:
+        for line in horizontal_lines + vertical_lines:
+            line.draw()
     fixation.draw()
     win.flip()
     print(f"EXACT occluder time: {trial_clock.getTime()}s") if verbose else None
@@ -589,9 +571,9 @@ for trial_number, trial in enumerate(trials):
         elif trial[:-2] == "135_bottom":
             line_45_bottom.draw()
             
-        # Draw the grid
-        for line in horizontal_lines + vertical_lines:
-            line.draw()
+        if config["draw_grid"]:
+            for line in horizontal_lines + vertical_lines:
+                line.draw()
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()

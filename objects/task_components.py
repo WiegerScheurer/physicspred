@@ -55,7 +55,6 @@ ball = visual.Circle(win, radius=ball_radius, fillColor="white", lineColor="whit
 # Calculate the offset
 offset_y = interactor_width / 2
 
-
 ####################################### Defining the interactor lining #####################################
 ############################################### Original ###################################################
 # Define line_45
@@ -82,54 +81,6 @@ line_135.pos = (0, -offset_y)  # Adjust position
 
 ############################################### New one ###################################################
 
-# # Define line_45
-# line_45_top = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_45_top.ori = 45  # Rotate the line by 45 degrees
-
-# # Create line_45_bottom with the same properties
-# line_45_bottom = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_45_bottom.ori = 45  # Rotate the line by 45 degrees
-
-# bounce_dist = get_bounce_dist(ball_radius)
-
-# line_45_top.pos = ((bounce_dist + offset_y), -bounce_dist)  # Adjust position
-# line_45_bottom.pos = (-(bounce_dist + offset_y), bounce_dist)  # Adjust position
-
-# # Define line_135
-# line_135_top = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_135_top.ori = 135  # Rotate the line by 135 degrees
-
-# # Create line_135_bottom with the same properties
-# line_135_bottom = visual.Rect(
-#     win,
-#     width=interactor_width,
-#     height=interactor_height,
-#     fillColor="red",
-#     lineColor="red",
-# )
-# line_135_bottom.ori = 135  # Rotate the line by 135 degrees
-
-# line_135_top.pos = (-bounce_dist, -offset_y)  # Adjust position
-# line_135_bottom.pos = (bounce_dist, offset_y)  # Adjust position
-
 def create_interactor(win, width, height, fill_color, line_color, ori, pos):
     rect = visual.Rect(
         win,
@@ -145,22 +96,12 @@ def create_interactor(win, width, height, fill_color, line_color, ori, pos):
 bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2))
 
 # Define line_45_top and line_45_bottom
-# line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist + offset_y), -bounce_dist))
-# line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist + offset_y), bounce_dist))
-
-# # Define line_135_top and line_135_bottom
-# line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist + offset_y)))
-# line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist + offset_y)))
-
 line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist), -bounce_dist))
 line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist), bounce_dist))
 
 # Define line_135_top and line_135_bottom
 line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist)))
 line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist)))
-
-
-
 
 # occluder = visual.Circle(
 #     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
@@ -189,9 +130,6 @@ occluder_glass = visual.Rect(
 
 
 ### Create borders to maintain square task screen
-# Calculate the size of the square field
-# square_size = min(win_dims)
-# square_size = 1000
 
 # Create the grey borders
 left_border = visual.Rect(
@@ -229,3 +167,21 @@ bottom_border = visual.Rect(
     lineColor="grey",
     pos=[0, -(win_dims[1] - square_size) / 4 - square_size / 2],
 )
+
+##### DRAW GRID TO ALIGN INTERACTOR WITH
+# Define the grid lines
+line_length = 800  # Length of the lines to cover the window
+line_width = 1  # Width of the lines
+num_lines = 10  # Number of lines on each side of the center
+
+# Create horizontal lines
+horizontal_lines = []
+for i in range(-num_lines, num_lines + 1):
+    y = i * (line_length / (2 * num_lines))
+    horizontal_lines.append(visual.Line(win, start=(-line_length / 2, y), end=(line_length / 2, y), lineWidth=line_width))
+
+# Create vertical lines
+vertical_lines = []
+for i in range(-num_lines, num_lines + 1):
+    x = i * (line_length / (2 * num_lines))
+    vertical_lines.append(visual.Line(win, start=(x, -line_length / 2), end=(x, line_length / 2), lineWidth=line_width))

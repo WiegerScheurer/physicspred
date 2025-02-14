@@ -1,6 +1,6 @@
 # win_dims: [1920, 1080]
 # win_dims: [3840, 2160]
-avg_ball_speed: 7
+avg_ball_speed: 8
 natural_speed_variance: .5 #.5
 # timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
 ball_radius: 40 
@@ -9,7 +9,7 @@ square_size: 1080 # to work on my laptop for meeting
 interactor_height: 150
 interactor_width: 15
 occluder_radius: 130 # Used to be 130 
-occluder_opacity: .6 # 1 is opaque, 0 is transparent
+occluder_opacity: 1 # 1 is opaque, 0 is transparent
 feedback_freq: 10 # After how many trials there will be a feedback moment
 n_trials: 60
 ball_speed_change: 1.2
@@ -17,10 +17,10 @@ ball_spawn_spread: 1.8 # smaller is more spread (I think)
 hue_change_duration: 2
 slow_bounce_skip_factor: 1.4
 fast_bounce_skip_factor: 1.8
-
+draw_grid: false
 verbose: false
 experiment_screen: 0 # 0 is the main screen, 1 is the second screen
-full_screen: false
+full_screen: true
 psychopy_version: "2024.2.4"
 
 # fMRI parameters (current values based on Ekman paper)
