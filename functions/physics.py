@@ -46,6 +46,13 @@ def collide(start_direction: str, line_angle: int, ball_speed: float):
     
     return new_direction
 
+# Function to calculate the decay factor
+def calculate_decay_factor(start_speed, elapsed_time, total_time):
+    constant = 0.01/6 # Based on what my eyes see as a realistic decay
+    # constant = 1
+    decay_rate = start_speed * constant  # Adjust this value to control the rate of decay
+    return np.exp(-decay_rate * (elapsed_time / total_time))
+
 def will_cross_fixation(ball_pos, velocity, skip_factor):
     # Calculate the next position
     next_pos = ball_pos + np.array([velocity[0] * skip_factor, velocity[1] * skip_factor])    
@@ -208,6 +215,32 @@ def _flip_dir(direction: str | tuple) -> str | tuple:
     
 #     return _vec_to_dir(end_direction)
 
+# def _bounce_ball(start_direction: str, interactor: str, str_or_tuple_out:str = "str"):
+#     """
+#     Bounces a ball based on the start direction and the type of interactor.
+
+#     Parameters:
+#     start_direction (str): The initial direction of the ball.
+#     interactor (str): The type of interactor.
+
+#     Returns:
+#     str: The new direction of the ball after bouncing.
+
+#     """
+
+#     if interactor[:2] == "45":
+#         relative_direction = "left" if start_direction in ["right", "left"] else "right"
+#         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
+#     elif interactor[:3] == "135":
+#         relative_direction = "left" if start_direction in ["up", "down"] else "right"
+#         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
+#     else:
+#         end_loc = _dir_to_vec(start_direction) # When no interactor, ball ends up in the same direction
+        
+#     end_direction = _flip_dir(end_loc)
+    
+#     return end_direction if str_or_tuple_out == "tuple" else _vec_to_dir(end_direction)
+
 def _bounce_ball(start_direction: str, interactor: str, str_or_tuple_out:str = "str"):
     """
     Bounces a ball based on the start direction and the type of interactor.
@@ -221,10 +254,10 @@ def _bounce_ball(start_direction: str, interactor: str, str_or_tuple_out:str = "
 
     """
 
-    if interactor == "45":
+    if interactor[:3] == "135":
         relative_direction = "left" if start_direction in ["right", "left"] else "right"
         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
-    elif interactor == "135":
+    elif interactor[:2] == "45":
         relative_direction = "left" if start_direction in ["up", "down"] else "right"
         end_loc = _rotate_90(start_direction=start_direction, left_or_right=relative_direction)
     else:
@@ -233,6 +266,7 @@ def _bounce_ball(start_direction: str, interactor: str, str_or_tuple_out:str = "
     end_direction = _flip_dir(end_loc)
     
     return end_direction if str_or_tuple_out == "tuple" else _vec_to_dir(end_direction)
+
 
 def plot_positions(start_pos, end_pos, pred_to_input, interactor):
     positions = {"up": (0, 1), "right": (1, 0), "down": (0, -1), "left": (-1, 0)}
@@ -256,9 +290,9 @@ def plot_positions(start_pos, end_pos, pred_to_input, interactor):
             ax.plot(pred_coords[0], pred_coords[1], 'bo', markersize=10, label='Predicted Position', alpha=.5)
     
     # Add diagonal stripe based on interactor value
-    if interactor == "45":
+    if interactor[:2] == "45":
         ax.plot([-.2, .2], [-.2, .2], 'k-', label='45° interactor')
-    elif interactor == "135":
+    elif interactor[:3] == "135":
         ax.plot([-.2, .2], [.2, -.2], 'k-', label='135° interactor')
     
     ax.legend()

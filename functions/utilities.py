@@ -270,3 +270,23 @@ def plot_two_sided_distribution(samples, center_time, min_jitter, max_jitter, sc
     plt.legend()
     plt.grid(True)
     plt.show()
+
+def balance_over_bool(boolean_list:list, value_options:list, randomised:bool=True) -> list:
+    """Map one list of value options onto the True values of a boolean list.
+
+    Args:
+        boolean_list (list): List that indicates which trials should get a value.
+        value_options (list): List of the value options
+    """    
+    
+    val_seq = determine_sequence(np.sum(boolean_list), value_options, randomised=randomised)
+    
+    result = []
+    value_index = 0
+    for item in boolean_list:
+        if item:
+            result.append(val_seq[value_index])
+            value_index += 1
+        else:
+            result.append(False)
+    return result

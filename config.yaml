@@ -1,9 +1,11 @@
 # win_dims: [1920, 1080]
-# win_dims: [3840, 2160]
+win_dims: [3840, 2160]
+# win_dims: [2560, 1440]
 avg_ball_speed: 8
 natural_speed_variance: .5 #.5
 # timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
-ball_radius: 40 
+psychopy_version: "2024.2.4"
+ball_radius: 50
 # square_size: 1440 # The size of the square ball experiment screen (manually set now)
 square_size: 1080 # to work on my laptop for meeting
 interactor_height: 150
@@ -11,21 +13,29 @@ interactor_width: 15
 occluder_radius: 130 # Used to be 130 
 occluder_opacity: 1 # 1 is opaque, 0 is transparent
 feedback_freq: 10 # After how many trials there will be a feedback moment
-n_trials: 60
+n_trials: 150
+verbose: false
+
+# Ball speed change parameters:
 ball_speed_change: 1.2
 ball_spawn_spread: 1.8 # smaller is more spread (I think)
+
+# Fixation task parameters:
 hue_change_duration: 2
-slow_bounce_skip_factor: 1.4
-fast_bounce_skip_factor: 1.8
-draw_grid: false
-verbose: false
+
+# Ball hiccup task parameters:
+slow_bounce_skip_factor: 1.6
+fast_bounce_skip_factor: 2.0
+
+# Screen parameters:
 experiment_screen: 0 # 0 is the main screen, 1 is the second screen
 full_screen: true
-psychopy_version: "2024.2.4"
+draw_grid: false
 
 # fMRI parameters (current values based on Ekman paper)
 tr: .450
 te: .039s
+truncation_cutoff: 4
 
 # Task parameters:
 target_baserate: .5 #.25 # Frequency of target trials. 1 means 1:0, .25 is 1:3, or 25% target trials, etc. 
@@ -35,7 +45,7 @@ frame_rate: 0.016666666666 #0.01 is about 75 Hz 66666 # 60 Hz; 1/60
 fixation_time: .5
 interactor_time: 1
 occluder_time: .5
-ballmov_time: 6 #4.2222 #7
+ballmov_time: 4.5 #4.2222 #7
 feedback_time: 1
 mean_iti: 2
 min_iti: 1

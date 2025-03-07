@@ -29,6 +29,7 @@ from functions.utilities import (
     get_pos_and_dirs,
     truncated_exponential_decay,
     two_sided_truncated_exponential,
+    balance_over_bool,
 )
 from functions.physics import (
     check_collision,
@@ -112,7 +113,7 @@ expInfo = {
     "participant": f"sub-{random.randint(0, 999999):06.0f}",
     "session": "001",
     # 'run': f"run-{random.randint(0, 10):02.0f}",
-    "task": ["Ball Hiccup", "Ball Speed Change", "Fixation Hue Change"],
+    "task": ["Ball Hue", "Ball Hiccup", "Ball Speed Change", "Fixation Hue Change"],
     "feedback": ["No", "Yes"],
 }
 
@@ -205,17 +206,18 @@ rand_bounce_direction_options = ["left", "right"]
 ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
 rand_speed_change_options = ["slower", "faster"]
 natural_speed_variance = config["natural_speed_variance"]
+# ball_hue_moment_options = ["pre", "mid", "post"]
+ball_hue_moment_options = ["pre", "pre", "pre"]
 
+ball_speed_options = list(
+    np.arange(
+        avg_ball_speed - natural_speed_variance,
+        avg_ball_speed + (2 * natural_speed_variance),
+        natural_speed_variance,
+    )
+)
 
-# ball_speed_options = list(
-#     np.arange(
-#         avg_ball_speed - natural_speed_variance,
-#         avg_ball_speed + (2 * natural_speed_variance),
-#         natural_speed_variance,
-#     )
-# )
-
-ball_speed_options = [avg_ball_speed] * 2 # Revert this to code above EVENTUALLY
+# ball_speed_options = [avg_ball_speed] * 2 # Revert this to code above EVENTUALLY
 
 # Create deterministically randomised; balanced parameter sequences
 trials = determine_sequence(n_trials, trial_options, randomised=True)
@@ -234,10 +236,12 @@ ball_spawn_spread = config[
     "ball_spawn_spread"
 ]  # Margin around fixation where the ball can spawn (smaller = )
 
+ball_hue_moments = balance_over_bool(ball_changes, ball_hue_moment_options) # Determine when the hue change occurs, balance for target trials separately
+
 # Get ITI distribution based on randomly sampled truncated exponential decay
 decay_steepness = 1.0
-# itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"], n_trials)
-itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], config["max_iti"], scale=decay_steepness, size=n_trials)
+itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"], n_trials)
+# itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], config["max_iti"], scale=decay_steepness, size=n_trials)
 
 # Generate a random ITI for each trial
 # itis = np.random.uniform(config["min_iti"], config["max_iti"], n_trials)
@@ -249,14 +253,12 @@ itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], co
 # INTRODUCE NOVEL PROBLEMS.
 
 
-
-
-
 # Define the start and end colors for the subtle hue change
 start_color = np.array([1.0, 1.0, 1.0])  # White
-# end_color = np.array([0.9, 0.9, 0.9])    # Light gray
 end_color = np.array([0.75, 0.75, 0.75])  # Light gray
-# end_color = np.array([0, 1.0, 0])  # Light green for pilot
+# end_color = np.array([0, 1, 0])
+occluder_color = np.array([0, 0, 0]) # np.array([0.1, 0.1, 0.1])
+
 
 # **TASK SELECTION MENU**
 task_choice = None
@@ -401,9 +403,9 @@ for trial_number, trial in enumerate(trials):
     ball_change = ball_changes[trial_number]  # 20% probability of target ball change
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
     this_iti = itis[trial_number]  # Random ITI
+    ball_hue_moment = ball_hue_moments[trial_number]  # Random moment for hue change
 
     print(f"Target trial: {ball_change}, Speed change: {rand_speed_change}")
-
 
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
     bounce_moment = None
@@ -506,12 +508,9 @@ for trial_number, trial in enumerate(trials):
             print(f"LEFT SCREEN AT {left_screen_time:.3f}")
             print(f"SCREEN TIME: {screen_time:.3f}")
             
-            
-        # latest_speed = avg_ball_speed # np.abs(np.max(velocity)) #############
-        
+                    
         if trial_clock.getTime() % 0.5 < 0.02 and verbose:
             print(f"Screen refresh rate: {refreshRate}")  # At 75 Hz in UB singel
-            # latest_speed = np.abs(np.max(velocity)) #############
 
             # print(f"Ball direction: {velocity_to_direction(velocity)}")
             
@@ -520,18 +519,12 @@ for trial_number, trial in enumerate(trials):
             pre_bounce_velocity = np.max(np.abs(velocity)) if pre_bounce_velocity == None else pre_bounce_velocity
             if trial[:2] == "45":
                 print(f"BOUNCED on 45 at {trial_clock.getTime()}") #if verbose else None
-                # velocity = collide(edge, 45, this_ball_speed)  # Reflect off 45°
                 velocity = collide(_flip_dir(edge), 45, pre_bounce_velocity)  # Reflect off 45°
-                # new_dir = _bounce_ball((edge), trial[:2], str_or_tuple_out="tuple")
-                # velocity = [d_dist * latest_speed for d_dist in new_dir]
                 bounce_moment = trial_clock.getTime()
 
             elif trial[:3] == "135":
                 print(f"BOUNCED on 135 at {trial_clock.getTime()}") #if verbose else None
-                # velocity = collide(edge, 135, this_ball_speed)  # Reflect off 135°
                 velocity = collide(_flip_dir(edge), 135, pre_bounce_velocity)  # Reflect off 135°
-                # new_dir = _bounce_ball((edge), trial[:3], str_or_tuple_out="tuple")
-                # velocity = [d_dist * latest_speed for d_dist in new_dir]
                 bounce_moment = trial_clock.getTime()
 
             bounce = False  # Prevent double bouncing
@@ -543,8 +536,6 @@ for trial_number, trial in enumerate(trials):
         right_border.draw()
         top_border.draw()
         bottom_border.draw()
-        # if trial in line_map: # Draw interactor line
-        #     line_map[trial].draw()
         
         if trial[:-2] == "45_top":
             line_135_top.draw()
@@ -567,7 +558,6 @@ for trial_number, trial in enumerate(trials):
             # rand_speed_change == "faster" and
             ball_change and
             not speed_changed and
-            # np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
             np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.1)): # If ball fully behind occluder, change speed briefly
             if rand_speed_change == "faster":
                 skip_factor = config["fast_bounce_skip_factor"]
@@ -576,6 +566,7 @@ for trial_number, trial in enumerate(trials):
 
         else:
             skip_factor = 1
+            
 
         if will_cross_fixation(ball.pos, velocity, skip_factor):
 
@@ -615,7 +606,52 @@ for trial_number, trial in enumerate(trials):
             crossed_fixation = True
             print(f"crossed fixation at {trial_clock.getTime()}") if verbose else None
 
+##################################################### BALL HUE CHANGE MOMENT PRE OR POST OCCLUSION DETERMINATION
 
+        # if (ball_hue_moment == "pre" 
+        #     and ball_change_moment == None
+        #     # and np.linalg.norm(ball.pos) > win_dims[0] / .25): # Check if sensible
+        #     and np.linalg.norm(ball.pos) > square_size / 4):
+            
+        #     pre_ball_change_moment = trial_clock.getTime() # Check if overwriting of ball_change moment is problem
+        #     ball_change_moment = trial_clock.getTime()
+        #     print(f"EARLY HUE CHANGE MOMENT: {ball_change_moment}")
+            
+        # if (task_choice == "Ball Hue" 
+        #     and ball_hue_moment == "pre" 
+        #     # and np.linalg.norm(ball.pos) > win_dims[0] * .25 # Check if sensible
+        #     and ball_hue_moment != None
+        #     and ball_change_moment != None):
+                        
+        #     elapsed_time = trial_clock.getTime() - pre_ball_change_moment
+
+        #     # duration = config["hue_change_duration"]  # Duration of the color change in seconds
+        #     ball_prepost_duration = .5
+        #     # factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
+        #     ball_prepost_factor = min(elapsed_time / ball_prepost_duration, 1.0)  # Ensure factor is between 0 and 1
+
+        #     if not hue_changed_back:
+        #         if not hue_changed:
+        #             ball.color = interpolate_color(start_color, end_color, ball_prepost_factor)
+        #             if np.all(ball.color == end_color):  # Check if the color has fully changed
+        #                 hue_changed = True  # Hue change confirmation toggle
+        #                 # ball_change_moment = trial_clock.getTime()  # Reset the change moment
+        #                 print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
+        #         else:
+        #             # elapsed_time_inv = trial_clock.getTime() - ball_change_moment
+        #             elapsed_time_inv = trial_clock.getTime() - pre_ball_change_moment
+        #             factor_inv = min(elapsed_time_inv / ball_prepost_duration, 1.0)
+        #             ball.color = interpolate_color(end_color, start_color, factor_inv)
+        #             if np.all(ball.color == start_color):  # Check if the color has fully changed back
+        #                 hue_changed_back = True  # Reset the hue change confirmation toggle
+        #                 print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
+        #                 print("Hue change") # if verbose else None
+
+        
+            ##################################
+            
+            
+            
         # USED TO BE ELIF, BUT SHOULDN'T MAKE SENSE
         # Check if ball is about to leave occluder
         if (
@@ -631,7 +667,10 @@ for trial_number, trial in enumerate(trials):
             bounce == False
         ):  # If the ball has bounced, or won't bounce at all (for continuation)
             if (
-                crossed_fixation and ball_change_moment == None and left_occluder
+                crossed_fixation 
+                and ball_change_moment == None 
+                and left_occluder 
+                and ball_hue_moment != "pre"# If bounce not yet registered, and ball has crossed fixation + left occluder
             ):  # If bounce not yet registered, and ball has crossed fixation
                 (
                     print(
@@ -644,11 +683,13 @@ for trial_number, trial in enumerate(trials):
                 exp_data["target_onset"][-1] = (
                     ball_change_moment if ball_change else None
                 )
-            if bounce_moment != None and ball_change_moment != None:
+            if bounce_moment != None and ball_change_moment != None: # If the ball has bounced and the ball change moment has been set
                 elapsed_time = trial_clock.getTime() - ball_change_moment
 
                 duration = config["hue_change_duration"]  # Duration of the color change in seconds
+                ball_duration = .5
                 factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
+                ball_factor = min(elapsed_time / ball_duration, 1.0)  # Ensure factor is between 0 and 1
 
                 if task_choice == "Fixation Hue Change" and ball_change and not hue_changed_back:
                     if not hue_changed:
@@ -682,6 +723,25 @@ for trial_number, trial in enumerate(trials):
                     # This is most likely not necessary, but the speed_changed works as a toggle
                     print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
                     speed_changed = True
+                
+                if (task_choice == "Ball Hue" 
+                    and ball_change 
+                    and not hue_changed_back
+                    and ball_hue_moment == "mid"):
+                
+                    if not hue_changed:
+                        ball.color = occluder_color
+
+                        hue_changed = True  # Hue change confirmation toggle
+                        print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
+                    else:
+                        ball.color = interpolate_color(occluder_color, start_color, ball_factor)
+
+                        if np.all(ball.color == occluder_color):  # Check if the color has fully changed back
+                            hue_changed_back = True  # Reset the hue change confirmation toggle
+                            print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
+                            print("Hue change") # if verbose else None
+
                 
 
         ball_direction = velocity_to_direction(velocity)

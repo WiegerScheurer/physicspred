@@ -112,7 +112,7 @@ expInfo = {
     "participant": f"sub-{random.randint(0, 999999):06.0f}",
     "session": "001",
     # 'run': f"run-{random.randint(0, 10):02.0f}",
-    "task": ["Ball Hiccup", "Ball Speed Change", "Fixation Hue Change"],
+    "task": ["Ball Hue", "Ball Hiccup", "Ball Speed Change", "Fixation Hue Change"],
     "feedback": ["No", "Yes"],
 }
 
@@ -207,15 +207,15 @@ rand_speed_change_options = ["slower", "faster"]
 natural_speed_variance = config["natural_speed_variance"]
 
 
-# ball_speed_options = list(
-#     np.arange(
-#         avg_ball_speed - natural_speed_variance,
-#         avg_ball_speed + (2 * natural_speed_variance),
-#         natural_speed_variance,
-#     )
-# )
+ball_speed_options = list(
+    np.arange(
+        avg_ball_speed - natural_speed_variance,
+        avg_ball_speed + (2 * natural_speed_variance),
+        natural_speed_variance,
+    )
+)
 
-ball_speed_options = [avg_ball_speed] * 2 # Revert this to code above EVENTUALLY
+# ball_speed_options = [avg_ball_speed] * 2 # Revert this to code above EVENTUALLY
 
 # Create deterministically randomised; balanced parameter sequences
 trials = determine_sequence(n_trials, trial_options, randomised=True)
@@ -250,13 +250,14 @@ itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], co
 
 
 
-
-
 # Define the start and end colors for the subtle hue change
 start_color = np.array([1.0, 1.0, 1.0])  # White
 # end_color = np.array([0.9, 0.9, 0.9])    # Light gray
 end_color = np.array([0.75, 0.75, 0.75])  # Light gray
 # end_color = np.array([0, 1.0, 0])  # Light green for pilot
+occluder_color = np.array([0, 0, 0]) # np.array([0.1, 0.1, 0.1])
+# dark_grey:
+# dark_grey = np.array([0.2, 0.2, 0.2])
 
 # **TASK SELECTION MENU**
 task_choice = None
@@ -286,11 +287,13 @@ explanation_text_speed = visual.TextStim(
         "center of the screen, where it passes behind a square.\n\n"
         "On top of this square you'll see a small white cross: +  \n"
         "Keep your eyes focused on this cross during the whole trial.\n\n"
-        "In some trials, the ball reappears earlier/later than possible. \n\n"
+        "In some trials, the ball changes colour behind the occluder \n\n"
+        "but quickly turns white again after reappearing.\n\n"
         "You are challenged to detect these changes.\n\n"
         "When you see a change, press the arrow key to indicate on what\n"
-        "side of the square the ball reappeared unrealistically.\n\n"
+        "side of the square you saw the brief change of colour.\n\n"
         "Be as fast and accurate as possible!\n\n\n"
+        "We'll unveil your score every 10 trials.\n\n"
         "Press 'Space' to start."
     ),
     color="white",
@@ -576,6 +579,7 @@ for trial_number, trial in enumerate(trials):
 
         else:
             skip_factor = 1
+            
 
         if will_cross_fixation(ball.pos, velocity, skip_factor):
 
@@ -648,7 +652,9 @@ for trial_number, trial in enumerate(trials):
                 elapsed_time = trial_clock.getTime() - ball_change_moment
 
                 duration = config["hue_change_duration"]  # Duration of the color change in seconds
+                ball_duration = .5
                 factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
+                ball_factor = min(elapsed_time / ball_duration, 1.0)  # Ensure factor is between 0 and 1
 
                 if task_choice == "Fixation Hue Change" and ball_change and not hue_changed_back:
                     if not hue_changed:
@@ -682,6 +688,39 @@ for trial_number, trial in enumerate(trials):
                     # This is most likely not necessary, but the speed_changed works as a toggle
                     print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
                     speed_changed = True
+                
+                if task_choice == "Ball Hue" and ball_change and not hue_changed_back:
+                # elif task_choice == "Ball Grow" and ball_change and crossed_fixation:# and left_occluder:
+                
+                    if not hue_changed:
+                        ball.color = occluder_color
+                        # ball.color = interpolate_color(start_color, occluder_color, factor)
+                        # if np.all(fixation.color == end_color):  # Check if the color has fully changed
+                        hue_changed = True  # Hue change confirmation toggle
+                        # ball_change_moment = trial_clock.getTime()  # Reset the change moment
+                        print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
+                    else:
+                        # elapsed_time_inv = trial_clock.getTime() - ball_change_moment
+                        # factor_inv = min(elapsed_time_inv / duration, 1.0)
+                        # fixation.color = interpolate_color(end_color, start_color, factor_inv)
+                        
+                        ball.color = interpolate_color(occluder_color, start_color, ball_factor)
+                        # if np.all(ball.color == start_color):  # Check if the color has fully changed
+                        #     hue_changed = True  # Hue change confirmation toggle
+                        #     ball_change_moment = trial_clock.getTime()  # Reset the change moment
+                        
+                        if np.all(ball.color == occluder_color):  # Check if the color has fully changed back
+                            hue_changed_back = True  # Reset the hue change confirmation toggle
+                            print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
+                            print("Hue change") # if verbose else None
+                    # elapsed_time = trial_clock.getTime()
+                    # duration = 2
+                    # # duration = config["hue_change_duration"]  # Duration of the color change in seconds
+                    # factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
+                    
+                    # ball.color = interpolate_color(start_color, occluder_color, factor)
+                    # ball.color = np.array([1, 0, 0])
+                    # ball.radius = ball_radius * factor
                 
 
         ball_direction = velocity_to_direction(velocity)
