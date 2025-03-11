@@ -376,7 +376,7 @@ for trial_number, trial in enumerate(trials):
         line_45_top.draw()
     elif trial[:-2] == "135_bottom":
         line_45_bottom.draw()
-    inner_outline.draw()
+    # inner_outline.draw()
     occluder.draw()
     
     
@@ -584,7 +584,7 @@ for trial_number, trial in enumerate(trials):
         if config["draw_grid"]:
             for line in horizontal_lines + vertical_lines:
                 line.draw()
-        inner_outline.draw()
+        # inner_outline.draw()
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()

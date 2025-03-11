@@ -2,6 +2,7 @@ import os
 import sys
 import yaml
 import random
+import numpy as np
 from psychopy import visual, gui, core, data, filters
 
 sys.path.append(
@@ -178,23 +179,66 @@ outer_cross_vertices = [
     (-occluder_radius / outer_cross_factor, -occluder_radius), (-occluder_radius / outer_cross_factor, -occluder_radius / outer_cross_factor)
 ]
 
-# Create the cross shape
-occluder = visual.ShapeStim(
+# # Create the cross shape
+# occluder = visual.ShapeStim(
+#     win,
+#     vertices=cross_vertices,
+#     fillColor="grey",
+#     lineColor="grey",
+#     pos=(0, 0),
+#     opacity=occluder_opacity,
+# )
+
+
+# Load an external cross image with gradient already applied
+occluder = visual.ImageStim(
     win,
-    vertices=cross_vertices,
-    fillColor="grey",
-    lineColor="grey",
+    image="/Users/wiegerscheurer/Stimulus_material/buizen.png",  # Your pre-made gradient cross image
+    size=(occluder_radius*2, occluder_radius*2),
     pos=(0, 0),
-    opacity=occluder_opacity,
+    opacity=occluder_opacity
 )
 
-# # Define the vertices for the inner outline of the cross shape
-# inner_outline_vertices = [
-#     (-occluder_radius / cross_factor, -occluder_radius / cross_factor), (-occluder_radius / cross_factor, occluder_radius / cross_factor),
-#     (occluder_radius / cross_factor, occluder_radius / cross_factor), (occluder_radius / cross_factor, -occluder_radius / cross_factor),
-#     (-occluder_radius / cross_factor, -occluder_radius / cross_factor)
-# ]
+# # Replace your draw.occluder() with:
+# def draw_occluder():
+#     gradient_cross.draw()
 
+
+##### GRADIENT OCCLUDER::::: WORKS BUT ONLY SQUARE NOW::::
+# # Create a gradient texture
+# def create_gradient_texture(size, inner_color, outer_color):
+#     gradient = np.zeros((size, size, 3))
+#     center = size // 2
+#     max_distance = np.sqrt(2 * (center ** 2))
+    
+#     for y in range(size):
+#         for x in range(size):
+#             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
+#             t = distance / max_distance
+#             gradient[y, x] = (1 - t) * np.array(inner_color) + t * np.array(outer_color)
+    
+#     return gradient
+
+# # Define the size of the texture
+# texture_size = 256
+
+# # Define the inner and outer colors
+# inner_color = [0.5, 0.5, 0.5]  # Light grey
+# outer_color = [0.1, 0.1, 0.1]  # Dark grey
+
+# # Create the gradient texture
+# gradient_texture = create_gradient_texture(texture_size, inner_color, outer_color)
+
+# # Create the occluder with the gradient texture
+# occluder = visual.ImageStim(
+#     win,
+#     image=gradient_texture,
+#     size=(occluder_radius * 2, occluder_radius * 2),
+#     pos=(0, 0),
+#     opacity=occluder_opacity,
+#     interpolate=True
+# )
+########################
 
 # Create the inner outline shape
 inner_outline = visual.ShapeStim(
