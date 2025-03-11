@@ -2,7 +2,7 @@ import os
 import sys
 import yaml
 import random
-from psychopy import visual, gui, core, data
+from psychopy import visual, gui, core, data, filters
 
 sys.path.append(
     "/Users/wiegerscheurer/repos/physicspred"
@@ -50,7 +50,57 @@ win_dims = win.size
 
 fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0), height=50)
 
-ball = visual.Circle(win, radius=ball_radius, fillColor="white", lineColor="white")
+####################################### MAKING A BETTER BALL #############################
+ball = visual.Circle(win, radius=ball_radius, fillColor=config["ball_fillcolor"], lineColor=config["ball_linecolor"], interpolate=True)
+
+# Create a 2D isotropic Gaussian
+gaussian = visual.GratingStim(
+    win=win,
+    tex='sin',
+    mask='gauss',
+    size=(ball_radius*1.5, ball_radius),  # Size in pixels
+    sf=0,  # Spatial frequency (0 for no grating)
+    contrast=1,
+    color='white',
+    opacity=.2
+)
+
+# Create a 2D isotropic Gaussian
+ball_tone = visual.GratingStim(
+    win=win,
+    tex='sin',
+    mask='gauss',
+    size=(ball_radius*2.1, ball_radius*2.1),  # Size in pixels
+    # size=(ball_radius, ball_radius),  # Size in pixels
+    sf=0,  # Spatial frequency (0 for no grating)
+    contrast=1,
+    color='white',
+    opacity=.9,
+)
+
+# # Create a 2D isotropic Gaussian
+# ball_tone = visual.GratingStim(
+#     win=win,
+#     tex='sin',
+#     mask='gauss',
+#     size=(ball_radius, ball_radius),  # Size in pixels
+#     # size=(ball_radius, ball_radius),  # Size in pixels
+#     sf=0,  # Spatial frequency (0 for no grating)
+#     contrast=1,
+#     color='red',
+#     opacity=1,
+# )
+
+# Create a 2D isotropic Gaussian
+ball_glimmer = visual.GratingStim(
+    win=win,
+    tex='sin',
+    mask='gauss',
+    size=(ball_radius/1.5, ball_radius*1.5),  # Size in pixels
+    sf=0,  # Spatial frequency (0 for no grating)
+    contrast=1,
+    color='white',
+)
 
 # Calculate the offset
 offset_y = interactor_width / 2
@@ -103,20 +153,75 @@ line_45_top = create_interactor(win, interactor_width, interactor_height, "red",
 line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist)))
 line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist)))
 
-# occluder = visual.Circle(
-#     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
-# )
+from psychopy import visual
 
-# Add opacity = .5 to make see-through
-occluder = visual.Rect(
+
+cross_factor = occluder_radius / 65
+# Define the vertices for a cross shape
+cross_vertices = [
+    (-occluder_radius, -occluder_radius / cross_factor), (-occluder_radius, occluder_radius / cross_factor),
+    (-occluder_radius / cross_factor, occluder_radius / cross_factor), (-occluder_radius / cross_factor, occluder_radius),
+    (occluder_radius / cross_factor, occluder_radius), (occluder_radius / cross_factor, occluder_radius / cross_factor),
+    (occluder_radius, occluder_radius / cross_factor), (occluder_radius, -occluder_radius / cross_factor),
+    (occluder_radius / cross_factor, -occluder_radius / cross_factor), (occluder_radius / cross_factor, -occluder_radius),
+    (-occluder_radius / cross_factor, -occluder_radius), (-occluder_radius / cross_factor, -occluder_radius / cross_factor)
+]
+
+outer_cross_factor = (occluder_radius / 65 ) - .2
+# Define the vertices for a cross shape
+outer_cross_vertices = [
+    (-occluder_radius, -occluder_radius / outer_cross_factor), (-occluder_radius, occluder_radius / outer_cross_factor),
+    (-occluder_radius / outer_cross_factor, occluder_radius / outer_cross_factor), (-occluder_radius / outer_cross_factor, occluder_radius),
+    (occluder_radius / outer_cross_factor, occluder_radius), (occluder_radius / outer_cross_factor, occluder_radius / outer_cross_factor),
+    (occluder_radius, occluder_radius / outer_cross_factor), (occluder_radius, -occluder_radius / outer_cross_factor),
+    (occluder_radius / outer_cross_factor, -occluder_radius / outer_cross_factor), (occluder_radius / outer_cross_factor, -occluder_radius),
+    (-occluder_radius / outer_cross_factor, -occluder_radius), (-occluder_radius / outer_cross_factor, -occluder_radius / outer_cross_factor)
+]
+
+# Create the cross shape
+occluder = visual.ShapeStim(
     win,
-    width=2 * occluder_radius,
-    height=2 * occluder_radius,
+    vertices=cross_vertices,
     fillColor="grey",
     lineColor="grey",
     pos=(0, 0),
     opacity=occluder_opacity,
 )
+
+# # Define the vertices for the inner outline of the cross shape
+# inner_outline_vertices = [
+#     (-occluder_radius / cross_factor, -occluder_radius / cross_factor), (-occluder_radius / cross_factor, occluder_radius / cross_factor),
+#     (occluder_radius / cross_factor, occluder_radius / cross_factor), (occluder_radius / cross_factor, -occluder_radius / cross_factor),
+#     (-occluder_radius / cross_factor, -occluder_radius / cross_factor)
+# ]
+
+
+# Create the inner outline shape
+inner_outline = visual.ShapeStim(
+    win,
+    vertices=outer_cross_vertices,
+    fillColor=[-0.5, -0.5, -0.5],  # Set fill color to dark grey using RGB values
+    lineColor=[-0.5, -0.5, -0.5],  # Set line color to dark grey using RGB values
+    pos=(0, 0),
+    opacity=occluder_opacity,
+)
+# Draw the cross shape
+# occluder.draw()
+
+# occluder = visual.Circle(
+#     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
+# )
+
+# # Add opacity = .5 to make see-through
+# occluder = visual.Rect(
+#     win,
+#     width=2 * occluder_radius,
+#     height=2 * occluder_radius,
+#     fillColor="grey",
+#     lineColor="grey",
+#     pos=(0, 0),
+#     opacity=occluder_opacity,
+# )
 
 occluder_glass = visual.Rect(
     win,
@@ -127,7 +232,6 @@ occluder_glass = visual.Rect(
     pos=(0, 0),
     opacity=.5,
 )
-
 
 ### Create borders to maintain square task screen
 

@@ -290,3 +290,13 @@ def balance_over_bool(boolean_list:list, value_options:list, randomised:bool=Tru
         else:
             result.append(False)
     return result
+
+def get_phantbounce_sequence(trials:list, rand_bounce_direction_options:list):
+    # Make empty nan array of same size as none_l bool
+    trial_array = np.empty(len(trials), dtype=object)
+
+    for dir_idx, none_dir in enumerate(["l", "r", "u", "d"]):
+        none_dir_bool = [trial == f"none_{none_dir}" for trial in trials]
+        trial_array[none_dir_bool] = rand_bounce_direction_options[dir_idx]
+
+    return trial_array

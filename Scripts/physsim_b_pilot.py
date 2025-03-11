@@ -29,6 +29,8 @@ from functions.utilities import (
     get_pos_and_dirs,
     truncated_exponential_decay,
     two_sided_truncated_exponential,
+    get_phantbounce_sequence,
+    
 )
 from functions.physics import (
     check_collision,
@@ -137,9 +139,13 @@ from objects.task_components import (
     line_135_top,
     line_135_bottom,
     occluder,
+    inner_outline,
     fixation,
     horizontal_lines,
-    vertical_lines,
+    vertical_lines,    
+    gaussian,
+    ball_tone,
+    ball_glimmer,
 )
 
 line_map = {
@@ -202,7 +208,8 @@ trial_options = ["45_top_r", "45_top_u",
 # 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
 edge_options = ["up", "down", "left", "right"]
 bounce_options = [True, False]
-rand_bounce_direction_options = ["left", "right"]
+rand_bounce_direction_options = ["left", "right"] * 2
+random.shuffle(rand_bounce_direction_options)
 ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
 rand_speed_change_options = ["slower", "faster"]
 natural_speed_variance = config["natural_speed_variance"]
@@ -219,9 +226,9 @@ ball_speed_options = list(
 # Create deterministically randomised; balanced parameter sequences
 trials = determine_sequence(n_trials, trial_options, randomised=True)
 bounces = determine_sequence(n_trials, bounce_options, randomised=True)
-rand_bounce_directions = determine_sequence(
-    n_trials, rand_bounce_direction_options, randomised=True
-)
+
+rand_bounce_directions = get_phantbounce_sequence(trials, rand_bounce_direction_options)
+
 ball_changes = determine_sequence(n_trials, ball_change_options, randomised=True)
 rand_speed_changes = determine_sequence(
     n_trials, rand_speed_change_options, randomised=True
@@ -247,9 +254,13 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 # INTRODUCE NOVEL PROBLEMS.
 
 # Define the start and end colors for the subtle hue change
-start_color = np.array([1.0, 1.0, 1.0])  # White
+# start_color = np.array([1.0, 1.0, 1.0])  # White
+start_color = config["ball_fillcolor"]
 end_color = np.array([0.75, 0.75, 0.75])  # Light gray
-occluder_color = np.array([0, 0, 0]) # np.array([0.1, 0.1, 0.1])
+# occluder_color = np.array([-0.25, -0.25, -0.25]) # np.array([0.1, 0.1, 0.1])
+occluder_color = np.array([-.5, -.55, -.5]) # np.array([0.1, 0.1, 0.1])
+ball_color_new = np.array([0, 0, 0])
+
 
 
 # **TASK SELECTION MENU**
@@ -365,7 +376,10 @@ for trial_number, trial in enumerate(trials):
         line_45_top.draw()
     elif trial[:-2] == "135_bottom":
         line_45_bottom.draw()
+    inner_outline.draw()
     occluder.draw()
+    
+    
     if config["draw_grid"]:
         for line in horizontal_lines + vertical_lines:
             line.draw()
@@ -389,6 +403,7 @@ for trial_number, trial in enumerate(trials):
     print(f"Ball will bounce: {bounces[trial_number]}")
 
     ball.pos = np.array(start_positions[edge])
+    # gaussian.pos = ball.pos
     velocity = np.array(directions[edge])
 
     bounce = bounces[trial_number]  # 50% chance to bounce
@@ -478,10 +493,36 @@ for trial_number, trial in enumerate(trials):
     # **BALL MOVEMENT LOOP**
     while trial_clock.getTime() < trial_duration:
         # Realistic ball speed decay, helps a lot
-        decay_factor = calculate_decay_factor(this_ball_speed, ballmov_time, trial_duration)
+        decay_factor = calculate_decay_factor(this_ball_speed, ballmov_time, trial_duration, constant=config["decay_constant"])
         velocity = [velocity[0] * decay_factor, velocity[1] * decay_factor] 
         ball.pos += tuple([velocity[0] * skip_factor, velocity[1] * skip_factor])
+        # put the gaussian slightly ahead of the ball
+        gaussian.pos = ball.pos + np.array([0, -.9*ball_radius]) # np.array([velocity[0] * 0.1, velocity[1] * 0.1])
+        
+        ######## Realistic ight source tryout ########
+        # Define the position of the light source (top right of the screen)
+        light_source_pos = np.array([-win.size[0] / 2, win.size[1] / 2])
+        # Get light source in the top of the screen
 
+        # Calculate the vector from the ball to the light source
+        vector_to_light = light_source_pos - ball.pos
+
+        # Calculate the distance from the ball to the light source
+        distance_to_light = np.linalg.norm(vector_to_light)
+
+        # Define a scaling factor (adjust this value as needed)
+        scaling_factor = 13
+
+        # Calculate the scaled vector
+        scaled_vector = vector_to_light * scaling_factor / distance_to_light
+
+        # Adjust the position of ball_tone based on the scaled vector
+        ball_tone.pos = ball.pos + scaled_vector
+                
+        
+        
+        # ball_tone.pos = ball.pos
+        # ball_glimmer.pos = ball.pos + np.array([ball_radius/3, ball_radius/3])
         
         
         # Update elapsed time (assuming you have a way to measure time, e.g., using a clock)
@@ -522,7 +563,10 @@ for trial_number, trial in enumerate(trials):
             crossed_fixation = True
 
         # Draw everything each frame
+        gaussian.draw()
         ball.draw()
+        ball_tone.draw() #if not hue_changed else None
+        # ball_glimmer.draw()
         left_border.draw()
         right_border.draw()
         top_border.draw()
@@ -540,6 +584,7 @@ for trial_number, trial in enumerate(trials):
         if config["draw_grid"]:
             for line in horizontal_lines + vertical_lines:
                 line.draw()
+        inner_outline.draw()
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         win.flip()
@@ -631,7 +676,7 @@ for trial_number, trial in enumerate(trials):
                 elapsed_time = trial_clock.getTime() - ball_change_moment
 
                 duration = config["hue_change_duration"]  # Duration of the color change in seconds
-                ball_duration = .5
+                ball_duration = config["ball_change_duration"]  # Duration of the color change in seconds
                 factor = min(elapsed_time / duration, 1.0)  # Ensure factor is between 0 and 1
                 ball_factor = min(elapsed_time / ball_duration, 1.0)  # Ensure factor is between 0 and 1
 
@@ -672,12 +717,16 @@ for trial_number, trial in enumerate(trials):
                 # elif task_choice == "Ball Grow" and ball_change and crossed_fixation:# and left_occluder:
                 
                     if not hue_changed:
-                        ball.color = occluder_color                        
+                        ball.color = occluder_color     # The mistake's not here, COLOUR IT SUDDENLY CHANGES INTO
+                        # ball.fillcolor = occluder_color     
+                        ball_tone.draw()
                         hue_changed = True  # Hue change confirmation toggle
                         print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
                     else:
                         
+                        # ball.color = interpolate_color(occluder_color, start_color, ball_factor)
                         ball.color = interpolate_color(occluder_color, start_color, ball_factor)
+                        ball_tone.draw()
                         if np.all(ball.color == occluder_color):  # Check if the color has fully changed back
                             hue_changed_back = True  # Reset the hue change confirmation toggle
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
@@ -834,8 +883,8 @@ for trial_number, trial in enumerate(trials):
     core.wait(config["feedback_time"])
 
     # Reset ball and fixation color to original after each trial
-    ball.fillColor = "white"
-    ball.lineColor = "white"
+    ball.fillColor = config["ball_fillcolor"]
+    ball.lineColor = config["ball_linecolor"]
     fixation.color = "white"
 
 win.close()

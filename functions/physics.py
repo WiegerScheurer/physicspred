@@ -47,8 +47,8 @@ def collide(start_direction: str, line_angle: int, ball_speed: float):
     return new_direction
 
 # Function to calculate the decay factor
-def calculate_decay_factor(start_speed, elapsed_time, total_time):
-    constant = 0.01/6 # Based on what my eyes see as a realistic decay
+def calculate_decay_factor(start_speed, elapsed_time, total_time, constant = (0.01/6)):
+    # constant = 0.01/6 # Based on what my eyes see as a realistic decay
     # constant = 1
     decay_rate = start_speed * constant  # Adjust this value to control the rate of decay
     return np.exp(-decay_rate * (elapsed_time / total_time))
