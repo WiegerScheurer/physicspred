@@ -1,5 +1,5 @@
-# win_dims: [1920, 1080]
-win_dims: [3840, 2160]
+win_dims: [1920, 1080]
+# win_dims: [3840, 2160]
 # win_dims: [2560, 1440]
 avg_ball_speed: 9
 natural_speed_variance: .5 #.5
@@ -17,9 +17,11 @@ feedback_freq: 10 # After how many trials there will be a feedback moment
 n_trials: 32
 verbose: false
 # ball_fillcolor: [-0.25, -0.25, -0.25] #"darkgray"
-ball_fillcolor: [0.55, 0.55, 0.55] #"darkgray"
+# ball_fillcolor: [0.55, 0.55, 0.55] #"darkgray"
+ball_fillcolor: [1, 1, 1] #"white"
+ball_linecolor: [1, 1, 1] #"white"
 # ball_linecolor: [-0.25, -0.25, -0.25] #"darkgray"
-ball_linecolor: [0.55, 0.55, 0.55] #"darkgray"
+# ball_linecolor: [0.55, 0.55, 0.55] #"darkgray"
 
 # Ball speed change parameters:
 ball_speed_change: 1.2
@@ -36,7 +38,7 @@ fast_bounce_skip_factor: 2.0
 
 # Screen parameters:
 experiment_screen: 0 # 0 is the main screen, 1 is the second screen
-full_screen: true
+full_screen: false
 draw_grid: false
 
 # fMRI parameters (current values based on Ekman paper)

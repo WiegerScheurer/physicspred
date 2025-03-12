@@ -89,7 +89,7 @@ with open(config_path, "r") as file:
     config = yaml.safe_load(file)
 
 # Access parameters from the config dictionary
-# win_dims = config['win_dims']
+win_dims = config['win_dims']
 avg_ball_speed = config["avg_ball_speed"]
 ball_radius = config["ball_radius"]
 interactor_height = config["interactor_height"]
@@ -146,6 +146,7 @@ from objects.task_components import (
     gaussian,
     ball_tone,
     ball_glimmer,
+    ball_shade,
 )
 
 line_map = {
@@ -155,7 +156,7 @@ line_map = {
     "135_bottom":   line_135_bottom,
 }
 
-win_dims = win.size
+# win_dims = win.size
 
 print(f"Screen dimensions: {win_dims}")
 
@@ -258,7 +259,8 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 start_color = config["ball_fillcolor"]
 end_color = np.array([0.75, 0.75, 0.75])  # Light gray
 # occluder_color = np.array([-0.25, -0.25, -0.25]) # np.array([0.1, 0.1, 0.1])
-occluder_color = np.array([-.5, -.55, -.5]) # np.array([0.1, 0.1, 0.1])
+# occluder_color = np.array([-.5, -.55, -.5]) # np.array([0.1, 0.1, 0.1])
+occluder_color = np.array([-.75, -.75, -.75]) # np.array([0.1, 0.1, 0.1])
 ball_color_new = np.array([0, 0, 0])
 
 
@@ -499,32 +501,26 @@ for trial_number, trial in enumerate(trials):
         # put the gaussian slightly ahead of the ball
         gaussian.pos = ball.pos + np.array([0, -.9*ball_radius]) # np.array([velocity[0] * 0.1, velocity[1] * 0.1])
         
-        ######## Realistic ight source tryout ########
+        # ######## Realistic ight source tryout ########
         # Define the position of the light source (top right of the screen)
-        light_source_pos = np.array([-win.size[0] / 2, win.size[1] / 2])
-        # Get light source in the top of the screen
+        
+        ball_shade.pos = ball.pos
+        
+        # Calculate the angle using arctan2
+        light_input = square_size #win.size[1]
+        # angle_radians = np.arctan2((light_input - (ball.pos[1] + 0.5 * light_input)), ball.pos[0] + 0.5 * light_input)
+        angle_radians = np.arctan2(ball.pos[0] + 0.5 * light_input, (2 * light_input - (ball.pos[1] + 0.5 * light_input))) # np.arctan2(y, x), because of triangle interested in
 
-        # Calculate the vector from the ball to the light source
-        vector_to_light = light_source_pos - ball.pos
+        # trans_pos_x = ball.pos[0] + 0.5 * light_input
+        # trans_pos_y = ball.pos[1] + 0.5 * light_input
 
-        # Calculate the distance from the ball to the light source
-        distance_to_light = np.linalg.norm(vector_to_light)
+        # print(f"real coordinates ball: x={trans_pos_x:.2f} y={trans_pos_y:.2f}")        
+        # Convert the angle from radians to degrees
+        angle_degrees = np.degrees(angle_radians)
 
-        # Define a scaling factor (adjust this value as needed)
-        scaling_factor = 13
-
-        # Calculate the scaled vector
-        scaled_vector = vector_to_light * scaling_factor / distance_to_light
-
-        # Adjust the position of ball_tone based on the scaled vector
-        ball_tone.pos = ball.pos + scaled_vector
+        # Set the orientation of the ball_shade
+        ball_shade.ori = -angle_degrees
                 
-        
-        
-        # ball_tone.pos = ball.pos
-        # ball_glimmer.pos = ball.pos + np.array([ball_radius/3, ball_radius/3])
-        
-        
         # Update elapsed time (assuming you have a way to measure time, e.g., using a clock)
         ballmov_time += config["frame_rate"]  # time_step should be the time increment per loop iteration
 
@@ -563,9 +559,11 @@ for trial_number, trial in enumerate(trials):
             crossed_fixation = True
 
         # Draw everything each frame
-        gaussian.draw()
+        # gaussian.draw()
+        
         ball.draw()
-        ball_tone.draw() #if not hue_changed else None
+        # ball_tone.draw() #if not hue_changed else None
+        ball_shade.draw()
         # ball_glimmer.draw()
         left_border.draw()
         right_border.draw()
@@ -719,16 +717,19 @@ for trial_number, trial in enumerate(trials):
                     if not hue_changed:
                         ball.color = occluder_color     # The mistake's not here, COLOUR IT SUDDENLY CHANGES INTO
                         # ball.fillcolor = occluder_color     
-                        ball_tone.draw()
+                        # ball_tone.draw()
+                        ball_shade.draw()
+
                         hue_changed = True  # Hue change confirmation toggle
                         print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
                     else:
                         
                         # ball.color = interpolate_color(occluder_color, start_color, ball_factor)
                         ball.color = interpolate_color(occluder_color, start_color, ball_factor)
-                        ball_tone.draw()
-                        if np.all(ball.color == occluder_color):  # Check if the color has fully changed back
-                            hue_changed_back = True  # Reset the hue change confirmation toggle
+                        # ball_tone.draw()
+                        ball_shade.draw()
+                        if np.all(ball.color == occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
+                            hue_changed_back = True  # Reset the hue change confirmation toggle 
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
                             print("Hue change") # if verbose else None
 

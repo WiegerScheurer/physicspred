@@ -18,7 +18,7 @@ with open(config_path, "r") as file:
 
 
 # Access parameters from the config dictionary
-# win_dims = config['win_dims']
+win_dims = config['win_dims']
 # ball_speed = config['ball_speed']
 ball_radius = config["ball_radius"]
 interactor_height = config["interactor_height"]
@@ -32,7 +32,7 @@ occluder_opacity = config["occluder_opacity"]
 exp_data = {par: [] for par in exp_parameters}
 
 win = visual.Window(
-    # size=win_dims,        # The size of the window in pixels (width, height).
+    size=win_dims,        # The size of the window in pixels (width, height).
     fullscr=config["full_screen"],  # Whether to run in full-screen mode. Overrides size arg
     screen=config["experiment_screen"],  # The screen number to display the window on (0 is usually the primary screen).
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').
@@ -52,7 +52,12 @@ win_dims = win.size
 fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0), height=50)
 
 ####################################### MAKING A BETTER BALL #############################
-ball = visual.Circle(win, radius=ball_radius, fillColor=config["ball_fillcolor"], lineColor=config["ball_linecolor"], interpolate=True)
+ball = visual.Circle(win, 
+                     radius=ball_radius, 
+                     fillColor=config["ball_fillcolor"], 
+                     lineColor=config["ball_linecolor"], 
+                     interpolate=True,
+                     opacity=1)
 
 # Create a 2D isotropic Gaussian
 gaussian = visual.GratingStim(
@@ -63,7 +68,7 @@ gaussian = visual.GratingStim(
     sf=0,  # Spatial frequency (0 for no grating)
     contrast=1,
     color='white',
-    opacity=.2
+    opacity=.8
 )
 
 # Create a 2D isotropic Gaussian
@@ -102,6 +107,14 @@ ball_glimmer = visual.GratingStim(
     contrast=1,
     color='white',
 )
+
+ball_shade = visual.ImageStim(
+    win,
+    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaq2.png",  # Your pre-made gradient cross image
+    size=(ball_radius*2, ball_radius*2),
+    opacity=.45
+)
+
 
 # Calculate the offset
 offset_y = interactor_width / 2
@@ -144,15 +157,50 @@ def create_interactor(win, width, height, fill_color, line_color, ori, pos):
     rect.pos = pos
     return rect
 
-bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2))
+# bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2))
+bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2 * 1.8)) # 1.8 factor is due to the that now we use an image
+
+# These are the old, plain rectangle interactors 
 
 # Define line_45_top and line_45_bottom
-line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist), -bounce_dist))
-line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist), bounce_dist))
+# line_45_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, ((bounce_dist), -bounce_dist))
+# line_45_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 45, (-(bounce_dist), bounce_dist))
 
 # Define line_135_top and line_135_bottom
-line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist)))
-line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist)))
+# line_135_bottom = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (-bounce_dist, -(bounce_dist)))
+# line_135_top = create_interactor(win, interactor_width, interactor_height, "red", "red", 135, (bounce_dist, (bounce_dist)))
+
+line_45_bottom = visual.ImageStim(
+    win,
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_45.png",  # Your pre-made gradient cross image
+    size=(interactor_height, interactor_height),
+    pos=(bounce_dist, -(bounce_dist)),
+    opacity=1
+)
+
+line_45_top = visual.ImageStim(
+    win,
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_45.png",  # Your pre-made gradient cross image
+    size=(interactor_height, interactor_height),
+    pos= (-(bounce_dist), bounce_dist),
+    opacity=1
+)
+
+line_135_bottom = visual.ImageStim(
+    win,
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_135.png",  # Your pre-made gradient cross image
+    size=(interactor_height, interactor_height),
+    pos=(-bounce_dist, -(bounce_dist)),
+    opacity=1
+)
+
+line_135_top = visual.ImageStim(
+    win,
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_135.png",  # Your pre-made gradient cross image
+    size=(interactor_height, interactor_height),
+    pos= ((bounce_dist), bounce_dist),
+    opacity=1
+)
 
 from psychopy import visual
 
@@ -193,10 +241,11 @@ outer_cross_vertices = [
 # Load an external cross image with gradient already applied
 occluder = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/buizen.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/buizen2.png",  # Your pre-made gradient cross image
     size=(occluder_radius*2, occluder_radius*2),
     pos=(0, 0),
-    opacity=occluder_opacity
+    # opacity=occluder_opacity
+    opacity=1
 )
 
 # # Replace your draw.occluder() with:
