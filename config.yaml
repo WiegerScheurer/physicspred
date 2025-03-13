@@ -1,8 +1,8 @@
 win_dims: [1920, 1080]
 # win_dims: [3840, 2160]
 # win_dims: [2560, 1440]
-avg_ball_speed: 11
-natural_speed_variance: .5 #.5
+avg_ball_speed: 5.5
+natural_speed_variance: .25 #.5
 # timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
 psychopy_version: "2024.2.4"
 ball_radius: 50
@@ -11,15 +11,15 @@ square_size: 1080 # to work on my laptop for meeting
 interactor_height: 150
 interactor_width: 15
 # occluder_radius: 100 # Used to be 130 
-occluder_radius: 190 # had it at cross size 180 # Used to be 130 
-occluder_opacity: 1.5 # 1 is opaque, 0 is transparent
-feedback_freq: 10 # After how many trials there will be a feedback moment
-n_trials: 150
+occluder_radius: 250 #190 # had it at cross size 180 # Used to be 130 
+occluder_opacity: 1 #.5 # 1 is opaque, 0 is transparent
+feedback_freq: 5 # After how many trials there will be a feedback moment
+n_trials: 24
 verbose: false
 # ball_fillcolor: [-0.25, -0.25, -0.25] #"darkgray"
 # ball_fillcolor: [0.55, 0.55, 0.55] #"darkgray"
-ball_fillcolor: [.75, .75, .75] #"white"
-ball_linecolor: [.75, .75, .75] #"white"
+ball_fillcolor: [.45, .45, .45] #"white"
+ball_linecolor: [.45, .45, .45] #"white"
 # ball_linecolor: [-0.25, -0.25, -0.25] #"darkgray"
 # ball_linecolor: [0.55, 0.55, 0.55] #"darkgray"
 fixation_color: "black"
@@ -32,7 +32,7 @@ decay_constant: 0.0022
 
 # Fixation task parameters:
 hue_change_duration: 2
-ball_change_duration: .5 #.45
+ball_change_duration: .35 #.45
 
 # Ball hiccup task parameters:
 slow_bounce_skip_factor: 1.6
@@ -52,7 +52,8 @@ truncation_cutoff: 4
 target_baserate: .5 #.25 # Frequency of target trials. 1 means 1:0, .25 is 1:3, or 25% target trials, etc. 
 
 # Timing parameters:
-frame_rate: 0.016666666666 #0.01 is about 75 Hz 66666 # 60 Hz; 1/60
+# frame_rate: 0.016666666666 #0.01 is about 75 Hz 66666 # 60 Hz; 1/60
+frame_rate: 0.00833333333 # perhaps 120Hz then? 1/120
 fixation_time: .5
 interactor_time: 1
 occluder_time: .5
@@ -63,6 +64,7 @@ min_iti: 1
 max_iti: 3 
 
 exp_parameters:
+  - trial_type
   - trial
   - ball_speed
   - interactor
@@ -70,7 +72,6 @@ exp_parameters:
   - bounce_moment
   - random_bounce_direction
   - target_onset
-  - speed_change
   - ball_change
   - abs_congruent
   - sim_congruent

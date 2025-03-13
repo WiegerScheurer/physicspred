@@ -4,6 +4,200 @@ import os
 from scipy.stats import truncexpon
 import matplotlib.pyplot as plt
 import numpy as np
+from itertools import product
+import pandas as pd
+
+def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed_variance=0.25):
+    # Your options
+    interactor_trial_options = ["45_top_r", "45_top_u", "45_bottom_l", "45_bottom_d",
+                               "135_top_l", "135_top_u", "135_bottom_r", "135_bottom_d"]
+    empty_trial_options = ["none_l", "none_r", "none_u", "none_d"]
+    bounce_options = [True, False]
+    ball_change_options = [True, False]
+    
+    # Updated to 3 different ball speeds
+    # avg_ball_speed = 11
+    # natural_speed_variance = 0.5
+    ball_speed_options = list(np.arange(
+        avg_ball_speed - natural_speed_variance,
+        avg_ball_speed + (2 * natural_speed_variance),
+        natural_speed_variance
+    ))[:3]  # Take only 3 speeds
+    
+    # Map each empty trial option to a specific bounce direction
+    direction_mapping = {
+        "none_l": "left",
+        "none_r": "right",
+        "none_u": "left",
+        "none_d": "right"
+    }
+    
+    # Calculate minimum trials for perfect balance with 3 ball speeds
+    # For interactor: 8 options × 2 bounce × 2 ball_change × 3 speeds = 96 combinations
+    # For empty: 4 options × 2 bounce × 2 ball_change × 3 speeds = 48 combinations
+    # To keep interactor:empty balanced, we need 96 of each = 192 total minimum
+    
+    # If trial_n is specified, create a balanced subset
+    if trial_n is not None:
+        # Make sure trial_n is even for interactor:empty balance
+        if trial_n % 2 == 1:
+            trial_n -= 1
+            print(f"Adjusted trial count to {trial_n} to maintain balance")
+        
+        half_n = trial_n // 2  # Half for interactor, half for empty
+        
+        # Create dataframe to store the balanced design
+        all_trials = []
+        
+        # For interactor trials
+        interactor_combos = list(product(
+            interactor_trial_options,
+            bounce_options,
+            ball_change_options,
+            ball_speed_options
+        ))
+        # Will need to repeat some combinations if half_n > len(interactor_combos)
+        interactor_subset = [interactor_combos[i % len(interactor_combos)] for i in range(half_n)]
+        random.shuffle(interactor_subset)
+        
+        # Create interactor trials
+        for i in range(half_n):
+            trial_option, bounce, ball_change, ball_speed = interactor_subset[i]
+            all_trials.append({
+                'trial_type': 'interactor',
+                'trial_option': trial_option,
+                'bounce': bounce,
+                'phant_bounce_direction': None,
+                'ball_change': ball_change,
+                'ball_speed': ball_speed
+            })
+        
+        # For empty trials
+        empty_combos = list(product(
+            empty_trial_options,
+            bounce_options,
+            ball_change_options,
+            ball_speed_options
+        ))
+        # Will need to repeat some combinations if half_n > len(empty_combos)
+        empty_subset = [empty_combos[i % len(empty_combos)] for i in range(half_n)]
+        random.shuffle(empty_subset)
+        
+        # Create empty trials
+        for i in range(half_n):
+            trial_option, bounce, ball_change, ball_speed = empty_subset[i]
+            bounce_direction = direction_mapping[trial_option] if bounce else None
+            all_trials.append({
+                'trial_type': 'empty',
+                'trial_option': trial_option,
+                'bounce': bounce,
+                'phant_bounce_direction': bounce_direction,
+                'ball_change': ball_change,
+                'ball_speed': ball_speed
+            })
+        
+        # Convert to dataframe and shuffle
+        df = pd.DataFrame(all_trials)
+        return df.sample(frac=1).reset_index(drop=True)
+    
+    # If trial_n is None, create the full balanced design
+    else:
+        # Create all possible combinations
+        all_trials = []
+        
+        # For interactor trials
+        for combo in product(interactor_trial_options, bounce_options, ball_change_options, ball_speed_options):
+            trial_option, bounce, ball_change, ball_speed = combo
+            all_trials.append({
+                'trial_type': 'interactor',
+                'trial_option': trial_option,
+                'bounce': bounce,
+                'phant_bounce_direction': None,
+                'ball_change': ball_change,
+                'ball_speed': ball_speed
+            })
+        
+        # For empty trials - we need to duplicate these to match interactor count
+        for combo in product(empty_trial_options, bounce_options, ball_change_options, ball_speed_options):
+            trial_option, bounce, ball_change, ball_speed = combo
+            bounce_direction = direction_mapping[trial_option] if bounce else None
+            
+            # Each empty trial combination needs to appear twice to balance with interactor trials
+            for _ in range(2):
+                all_trials.append({
+                    'trial_type': 'empty',
+                    'trial_option': trial_option,
+                    'bounce': bounce,
+                    'phant_bounce_direction': bounce_direction,
+                    'ball_change': ball_change,
+                    'ball_speed': ball_speed
+                })
+        
+        # Convert to dataframe and shuffle
+        df = pd.DataFrame(all_trials)
+        return df.sample(frac=1).reset_index(drop=True)
+
+def check_balance(df):
+    print(f"Total trials: {len(df)}")
+    
+    # Check trial type balance
+    type_counts = df['trial_type'].value_counts()
+    print("\nTrial type balance:")
+    print(type_counts)
+    
+    # Check trial option balance within each trial type
+    print("\nTrial option balance for interactor trials:")
+    interactor_options = df[df['trial_type'] == 'interactor']['trial_option'].value_counts().sort_index()
+    print(interactor_options)
+    print(f"Variance: {interactor_options.var():.2f}")
+    
+    print("\nTrial option balance for empty trials:")
+    empty_options = df[df['trial_type'] == 'empty']['trial_option'].value_counts().sort_index()
+    print(empty_options)
+    print(f"Variance: {empty_options.var():.2f}")
+    
+    # Check bounce balance
+    bounce_counts = df['bounce'].value_counts()
+    print("\nBounce balance:")
+    print(bounce_counts)
+    
+    # Check ball change balance
+    ball_change_counts = df['ball_change'].value_counts()
+    print("\nBall change balance:")
+    print(ball_change_counts)
+    
+    # Check ball speed balance
+    print("\nBall speed balance:")
+    print(df['ball_speed'].value_counts().sort_index())
+    
+    # Cross-tabulations for more detailed balance checks
+    print("\nCross-tabulation of trial_type × bounce:")
+    print(pd.crosstab(df['trial_type'], df['bounce']))
+    
+    print("\nCross-tabulation of trial_type × ball_change:")
+    print(pd.crosstab(df['trial_type'], df['ball_change']))
+    
+    print("\nCross-tabulation of bounce × ball_change:")
+    print(pd.crosstab(df['bounce'], df['ball_change']))
+    
+    # Check balance at the deepest level
+    print("\nBalance within interactor trial types:")
+    for option in sorted(df[df['trial_type'] == 'interactor']['trial_option'].unique()):
+        subset = df[(df['trial_type'] == 'interactor') & (df['trial_option'] == option)]
+        print(f"\n{option}:")
+        print(f"  Total: {len(subset)}")
+        print(f"  Bounce: {subset['bounce'].value_counts().to_dict()}")
+        print(f"  Ball Change: {subset['ball_change'].value_counts().to_dict()}")
+        print(f"  Ball Speed: {subset['ball_speed'].value_counts().to_dict()}")
+    
+    print("\nBalance within empty trial types:")
+    for option in sorted(df[df['trial_type'] == 'empty']['trial_option'].unique()):
+        subset = df[(df['trial_type'] == 'empty') & (df['trial_option'] == option)]
+        print(f"\n{option}:")
+        print(f"  Total: {len(subset)}")
+        print(f"  Bounce: {subset['bounce'].value_counts().to_dict()}")
+        print(f"  Ball Change: {subset['ball_change'].value_counts().to_dict()}")
+        print(f"  Ball Speed: {subset['ball_speed'].value_counts().to_dict()}")
 
 def count_list_types(list):
     """
@@ -44,7 +238,7 @@ def setup_folders(subject_id, task_name):
     return task_dir
 
 
-def save_performance_data(subject_id, task_name, data):
+def save_performance_data(subject_id, task_name, data, design_matrix:bool=False):
     """
     Save performance data to a CSV file.
 
@@ -58,7 +252,7 @@ def save_performance_data(subject_id, task_name, data):
     """
     task_dir = setup_folders(subject_id, task_name)
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"{date_str}.csv"
+    filename = f"{date_str}.csv" if not design_matrix else "design_matrix.csv"
     filepath = os.path.join(task_dir, filename)
 
     # Save the DataFrame to a CSV file
@@ -130,7 +324,6 @@ def get_pos_and_dirs(ball_speed, square_size, ball_spawn_spread, ball_speed_chan
         "left": (ball_speed, 0),
         "right": (-ball_speed, 0),
     }
-
     # Fast directions
     fast_ball_speed = ball_speed * ball_speed_change
     fast_directions = {

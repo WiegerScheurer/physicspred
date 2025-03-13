@@ -37,6 +37,9 @@ from functions.utilities import (
     truncated_exponential_decay,
     two_sided_truncated_exponential,
     get_phantbounce_sequence,
+    balance_over_bool,
+    create_balanced_trial_design,
+    check_balance,
     
 )
 from functions.physics import (
@@ -170,7 +173,7 @@ expInfo["frameRate"] = win.getActualFrameRate()
 if expInfo["frameRate"] != None:
     frameDur = 1.0 / round(expInfo["frameRate"])
 else:
-    frameDur = 1.0 / 60.0  # could not measure, so guess
+    frameDur = 1.0 / 120.0  # could not measure, so guess
 
 # get screen Hz for adjusting animations later
 # gets your refresh rate and stores it in the frame rate object
@@ -204,40 +207,61 @@ n_trials = config["n_trials"]  # Number of trials
 # does align with bottom-up and top-down nomenclature (going up; to the top; going down; to the bottom)
 
 # Equal occurrence frequency of interactor 45, 135 and "none", balanced for ball start location
-trial_options = ["45_top_r", "45_top_u",
-                 "45_bottom_l", "45_bottom_d",
-                 "135_top_l", "135_top_u",
-                 "135_bottom_r", "135_bottom_d"] + 2 * [f"none_{edge}" for edge in ["l", "r", "u", "d"]]
+# trial_options = ["45_top_r", "45_top_u",
+                #  "45_bottom_l", "45_bottom_d",
+                #  "135_top_l", "135_top_u",
+                #  "135_bottom_r", "135_bottom_d"] + 2 * [f"none_{edge}" for edge in ["l", "r", "u", "d"]]
+                
+                
+#####################OLD CODE #############################                
+# interactor_trial_options = ["45_top_r", "45_top_u",
+#                             "45_bottom_l", "45_bottom_d",
+#                             "135_top_l", "135_top_u",
+#                             "135_bottom_r", "135_bottom_d"]
+# empty_trial_options = ["none_l", "none_r", "none_u", "none_d"]  # For the none trials
 
-# 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
+# # 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
 edge_options = ["up", "down", "left", "right"]
-bounce_options = [True, False]
-rand_bounce_direction_options = ["left", "right"] * 2
-random.shuffle(rand_bounce_direction_options)
-ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
-rand_speed_change_options = ["slower", "faster"]
-natural_speed_variance = config["natural_speed_variance"]
+# bounce_options = [True, False]
+# rand_bounce_direction_options = ["left", "right"] * 2
+# random.shuffle(rand_bounce_direction_options)
+# ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
+# rand_speed_change_options = ["slower", "faster"]
+# natural_speed_variance = config["natural_speed_variance"]
 
 
-ball_speed_options = list(
-    np.arange(
-        avg_ball_speed - natural_speed_variance,
-        avg_ball_speed + (2 * natural_speed_variance),
-        natural_speed_variance,
-    )
-)
+# ball_speed_options = list(
+#     np.arange(
+#         avg_ball_speed - natural_speed_variance,
+#         avg_ball_speed + (2 * natural_speed_variance),
+#         natural_speed_variance,
+#     )
+# )
 
-# Create deterministically randomised; balanced parameter sequences
-trials = determine_sequence(n_trials, trial_options, randomised=True)
-bounces = determine_sequence(n_trials, bounce_options, randomised=True)
+# trial_types = determine_sequence(n_trials, [1, 0], randomised=True) # 1 is interactor, 0 is empty trial
 
-rand_bounce_directions = get_phantbounce_sequence(trials, rand_bounce_direction_options)
+# interactor_trials = balance_over_bool(trial_types, interactor_trial_options, randomised=True)
 
-ball_changes = determine_sequence(n_trials, ball_change_options, randomised=True)
-rand_speed_changes = determine_sequence(
-    n_trials, rand_speed_change_options, randomised=True
-)
-ball_speeds = determine_sequence(n_trials, ball_speed_options, randomised=True)
+# # Create deterministically randomised; balanced parameter sequences
+# trials = determine_sequence(n_trials, trial_options, randomised=True)
+
+# bounces = determine_sequence(n_trials, bounce_options, randomised=True)
+
+# rand_bounce_directions = get_phantbounce_sequence(trials, rand_bounce_direction_options, randomised=True) # Random phantom bounce direction
+
+# ball_changes = determine_sequence(n_trials, ball_change_options, randomised=True)
+# rand_speed_changes = determine_sequence(
+#     n_trials, rand_speed_change_options, randomised=True
+# )
+# ball_speeds = determine_sequence(n_trials, ball_speed_options, randomised=True)
+####################################################################################################################
+design_matrix = create_balanced_trial_design(trial_n=n_trials)
+trial_types = list(design_matrix["trial_type"])
+trials = list(design_matrix["trial_option"])
+bounces = list(design_matrix["bounce"])
+rand_bounce_directions = list(design_matrix["phant_bounce_direction"])
+ball_changes = list(design_matrix["ball_change"])
+ball_speeds = list(design_matrix["ball_speed"])
 
 ball_spawn_spread = config[
     "ball_spawn_spread"
@@ -335,11 +359,18 @@ for trial_number, trial in enumerate(trials):
     print(f"Trial number: {trial_number + 1}")
     trial_clock = core.Clock()  # Create a clock for the trial
 
+    # start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = (
+    #     get_pos_and_dirs(
+    #         avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
+    #     )
+    # )
+    
     start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = (
         get_pos_and_dirs(
             avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
         )
     )
+    
     
     ########### DRAW FIXATION CROSS ###########
     left_border.draw()
@@ -421,12 +452,12 @@ for trial_number, trial in enumerate(trials):
 
     bounce = bounces[trial_number]  # 50% chance to bounce
     rand_bounce_direction = rand_bounce_directions[trial_number]  # Random 90° phantom bounce direction
-    rand_speed_change = rand_speed_changes[trial_number]  # 50% chance to slow down or speed up
+    # rand_speed_change = rand_speed_changes[trial_number]  # 50% chance to slow down or speed up
     ball_change = ball_changes[trial_number]  # 20% probability of target ball change
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
     this_iti = itis[trial_number]  # Random ITI
 
-    print(f"Target trial: {ball_change}, Speed change: {rand_speed_change}")
+    print(f"Target trial: {ball_change}")
 
 
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
@@ -442,6 +473,7 @@ for trial_number, trial in enumerate(trials):
     hue_changed = False
     hue_changed_back = False
     pre_bounce_velocity = None
+    bounced_phantomly = False
     
     trial_duration = (config["fixation_time"] + 
                       config["interactor_time"] + 
@@ -455,7 +487,9 @@ for trial_number, trial in enumerate(trials):
 
     ##################### NEW CODE, integrate with stuff abocve, where I intiisalise the exp_data
     # Store trial characteristics
-    exp_data["trial"].append(len(exp_data["trial"]) + 1)
+    trial_no = len(exp_data["trial"]) + 1
+    exp_data["trial"].append(trial_no)
+    exp_data["trial_type"].append(trial_types[trial_no - 1])
     exp_data["interactor"].append(trial)
     exp_data["bounce"].append(bounce)  # Whether the ball will bounce
     exp_data["ball_speed"].append(this_ball_speed)
@@ -485,11 +519,6 @@ for trial_number, trial in enumerate(trials):
     # Conditional appends
     exp_data["random_bounce_direction"].append(
         rand_bounce_direction if bounce and trial[:4] == "none" else None # CHANGED HERE
-    )
-    exp_data["speed_change"].append(
-        rand_speed_change
-        if ball_change and task_choice[0] == "B" and ball_change_type == "S"
-        else None
     )
 
     # Append remaining values
@@ -573,19 +602,7 @@ for trial_number, trial in enumerate(trials):
         win.flip()
         core.wait(config["frame_rate"])  # Smooth animation, for 60 Hz do (1/60) which is 0.0166667
 
-        if (task_choice == "Ball Hiccup" and
-            # rand_speed_change == "faster" and
-            ball_change and
-            not speed_changed and
-            # np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
-            np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.1)): # If ball fully behind occluder, change speed briefly
-            if rand_speed_change == "faster":
-                skip_factor = config["fast_bounce_skip_factor"]
-            else:
-                skip_factor = (1/config["slow_bounce_skip_factor"])
-
-        else:
-            skip_factor = 1
+        skip_factor = 1 # leftover from old ball hiccup implementation, but move upwads later on
             
 
         if will_cross_fixation(ball.pos, velocity, skip_factor):
@@ -616,8 +633,11 @@ for trial_number, trial in enumerate(trials):
                     velocity = _dir_to_velocity(
                         _rotate_90(_flip_dir(edge), "right"), pre_bounce_velocity 
                     )  # Reflect off 135
-                    
-            elif not bounce:
+                
+                bounced_phantomly = True
+                bounce_moment = (trial_clock.getTime()) 
+                
+            elif not bounce and not bounced_phantomly:
                 bounce_moment = (
                     trial_clock.getTime()
                 )  # if bounce_moment == None else bounce_moment # MAYBE WILL DO THE TRICK
@@ -638,7 +658,8 @@ for trial_number, trial in enumerate(trials):
             occluder_exit_moment = trial_clock.getTime()
             left_occluder = True
 
-        elif (
+        # elif (
+        if (
             bounce == False
         ):  # If the ball has bounced, or won't bounce at all (for continuation)
             if (
@@ -679,22 +700,22 @@ for trial_number, trial in enumerate(trials):
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
                             print("Hue change") # if verbose else None
 
-                elif task_choice == "Ball Speed Change" and ball_change and not speed_changed:
-                    print(f"Current speed: {compute_speed(velocity):.2f}")
-                    ball_direction = velocity_to_direction(velocity)
+                # elif task_choice == "Ball Speed Change" and ball_change and not speed_changed:
+                #     print(f"Current speed: {compute_speed(velocity):.2f}")
+                #     ball_direction = velocity_to_direction(velocity)
 
-                    if rand_speed_change == "slower":
-                        velocity = np.array(slow_directions[_flip_dir(ball_direction)])
-                    elif rand_speed_change == "faster":
-                        velocity = np.array(fast_directions[_flip_dir(ball_direction)])
-                    print(f"New speed: {compute_speed(velocity):.2f}")
+                #     if rand_speed_change == "slower":
+                #         velocity = np.array(slow_directions[_flip_dir(ball_direction)])
+                #     elif rand_speed_change == "faster":
+                #         velocity = np.array(fast_directions[_flip_dir(ball_direction)])
+                #     print(f"New speed: {compute_speed(velocity):.2f}")
                     
-                    speed_changed = True
+                # #     speed_changed = True
 
-                elif task_choice == "Ball Hiccup" and ball_change:
-                    # This is most likely not necessary, but the speed_changed works as a toggle
-                    print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
-                    speed_changed = True
+                # elif task_choice == "Ball Hiccup" and ball_change:
+                #     # This is most likely not necessary, but the speed_changed works as a toggle
+                #     print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
+                #     speed_changed = True
                 
                 if task_choice == "Ball Hue" and ball_change and not hue_changed_back:
                 # elif task_choice == "Ball Grow" and ball_change and crossed_fixation:# and left_occluder:
@@ -772,22 +793,22 @@ for trial_number, trial in enumerate(trials):
                             correct_response = False
                         elif ball_direction == toetsen[0]:
                             feedback_text = (
-                                f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                                f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
                                 if give_feedback
                                 else ""
                             )
                             print(
-                                f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                                f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
                             )
                             correct_response = True
                         else:
                             feedback_text = (
-                                f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
+                                f"Wrong direction, should be a hue change of {ball_direction}ward ball"
                                 if give_feedback
                                 else ""
                             )
                             print(
-                                f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
+                                f"Wrong direction, should be a hue change of {ball_direction}ward ball"
                             )
                             correct_response = False
                 else:  # If there was nothing to detect
@@ -799,7 +820,7 @@ for trial_number, trial in enumerate(trials):
             # if not responded:
             if ball_change:
                 feedback_text = (
-                    f"Undetected ball change, it was a {rand_speed_change} {ball_direction}ward ball"
+                    f"Undetected ball change, there was a hue change of the {ball_direction}ward ball"
                     if give_feedback
                     else ""
                 )
@@ -834,18 +855,19 @@ for trial_number, trial in enumerate(trials):
     # Example usage in your existing code
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
-        this_precision = get_precision(
-            intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        )
-        this_sensitivity = get_sensitivity(
-            intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        )
-        this_f1 = get_f1_score(
-            intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        )
+        # this_precision = get_precision(
+        #     intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
+        # )
+        # this_sensitivity = get_sensitivity(
+        #     intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
+        # )
+        # this_f1 = get_f1_score(
+        #     intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
+        # )
         # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
-        feedback_text = f'Current accuracy: {(np.mean((this_precision["simulation"], this_precision["abstraction"]))*100):.2f}% changes detected!'
-        # feedback_text = "Theoretical feedback, implement still"
+        # feedback_text = f'Current accuracy: {(np.mean((this_precision["simulation"], this_precision["abstraction"]))*100):.2f}% changes detected!'
+        feedback_text = f'Current accuracy: {(get_precision(intermit_data, sim_con=None, expol_con=None)*100):.2f}% changes detected!'
+        
         
         # Show the break with countdown
         show_break(win, duration=10)
@@ -878,3 +900,7 @@ df = pd.DataFrame(exp_data)
 subject_id = expInfo["participant"]
 task_name = expInfo["task"].lower().replace(" ", "_")
 save_performance_data(expInfo["participant"], task_name, df)
+save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True)
+
+
+

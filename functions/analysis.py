@@ -25,7 +25,7 @@ def get_data(subject:str | None=None, datadir: str | None=None, task: str | None
         datafiles = os.listdir(f"{datadir}/{sub}/{task}/")
         for file in datafiles:
         
-            if file.endswith(".csv"):
+            if file.endswith(".csv") and not file.startswith("design_matrix"):
                 this_file = pd.read_csv(f"{datadir}/{sub}/{task}/{file}")
                 file_stack.append(this_file)
 
