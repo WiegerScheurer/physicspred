@@ -1,7 +1,7 @@
 win_dims: [1920, 1080]
 # win_dims: [3840, 2160]
 # win_dims: [2560, 1440]
-avg_ball_speed: 9
+avg_ball_speed: 11
 natural_speed_variance: .5 #.5
 # timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
 psychopy_version: "2024.2.4"
@@ -12,16 +12,18 @@ interactor_height: 150
 interactor_width: 15
 # occluder_radius: 100 # Used to be 130 
 occluder_radius: 190 # had it at cross size 180 # Used to be 130 
-occluder_opacity: 1 # 1 is opaque, 0 is transparent
+occluder_opacity: 1.5 # 1 is opaque, 0 is transparent
 feedback_freq: 10 # After how many trials there will be a feedback moment
-n_trials: 32
+n_trials: 150
 verbose: false
 # ball_fillcolor: [-0.25, -0.25, -0.25] #"darkgray"
 # ball_fillcolor: [0.55, 0.55, 0.55] #"darkgray"
-ball_fillcolor: [1, 1, 1] #"white"
-ball_linecolor: [1, 1, 1] #"white"
+ball_fillcolor: [.75, .75, .75] #"white"
+ball_linecolor: [.75, .75, .75] #"white"
 # ball_linecolor: [-0.25, -0.25, -0.25] #"darkgray"
 # ball_linecolor: [0.55, 0.55, 0.55] #"darkgray"
+fixation_color: "black"
+
 
 # Ball speed change parameters:
 ball_speed_change: 1.2
@@ -30,7 +32,7 @@ decay_constant: 0.0022
 
 # Fixation task parameters:
 hue_change_duration: 2
-ball_change_duration: .4 #.45
+ball_change_duration: .5 #.45
 
 # Ball hiccup task parameters:
 slow_bounce_skip_factor: 1.6

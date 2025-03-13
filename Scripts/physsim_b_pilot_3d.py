@@ -150,6 +150,11 @@ from objects.task_components import (
     fixation,
     horizontal_lines,
     vertical_lines,    
+    gaussian,
+    ball_tone,
+    ball_glimmer,
+    ball_shade,
+    fixation_outline,
 )
 
 line_map = {
@@ -269,7 +274,7 @@ end_color = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation chan
 # occluder_color = np.array([.4, .4, 0]) # np.array([0.1, 0.1, 0.1]) (colour for ball hue change)
 # yellow occluder
 # occluder_color = np.array([.2, .2, -.2])
-occluder_color = np.array([0, .3, 0])
+occluder_color = np.array([0, .4, 0])
 ball_color_new = np.array([0, 0, 0])
 
 
@@ -509,6 +514,28 @@ for trial_number, trial in enumerate(trials):
         decay_factor = calculate_decay_factor(this_ball_speed, ballmov_time, trial_duration, constant=config["decay_constant"])
         velocity = [velocity[0] * decay_factor, velocity[1] * decay_factor] 
         ball.pos += tuple([velocity[0] * skip_factor, velocity[1] * skip_factor])
+        # put the gaussian slightly ahead of the ball
+        gaussian.pos = ball.pos + np.array([0, -.9*ball_radius]) # np.array([velocity[0] * 0.1, velocity[1] * 0.1])
+        
+        # ######## Realistic ight source tryout ########
+        # Define the position of the light source (top right of the screen)
+        
+        ball_shade.pos = ball.pos
+        
+        # Calculate the angle using arctan2
+        light_input = square_size #win.size[1]
+        # angle_radians = np.arctan2((light_input - (ball.pos[1] + 0.5 * light_input)), ball.pos[0] + 0.5 * light_input)
+        angle_radians = np.arctan2(ball.pos[0] + 0.5 * light_input, (2 * light_input - (ball.pos[1] + 0.5 * light_input))) # np.arctan2(y, x), because of triangle interested in
+
+        # trans_pos_x = ball.pos[0] + 0.5 * light_input
+        # trans_pos_y = ball.pos[1] + 0.5 * light_input
+
+        # print(f"real coordinates ball: x={trans_pos_x:.2f} y={trans_pos_y:.2f}")        
+        # Convert the angle from radians to degrees
+        angle_degrees = np.degrees(angle_radians)
+
+        # Set the orientation of the ball_shade
+        ball_shade.ori = -angle_degrees
                 
         # Update elapsed time (assuming you have a way to measure time, e.g., using a clock)
         ballmov_time += config["frame_rate"]  # time_step should be the time increment per loop iteration
@@ -547,8 +574,13 @@ for trial_number, trial in enumerate(trials):
             bounce = False  # Prevent double bouncing
             crossed_fixation = True
 
-        # Draw on each frame
+        # Draw everything each frame
+        # gaussian.draw()
+        
         ball.draw()
+        # ball_tone.draw() #if not hue_changed else None
+        ball_shade.draw()
+        # ball_glimmer.draw()
         left_border.draw()
         right_border.draw()
         top_border.draw()
@@ -566,7 +598,7 @@ for trial_number, trial in enumerate(trials):
         if config["draw_grid"]:
             for line in horizontal_lines + vertical_lines:
                 line.draw()
-
+        # inner_outline.draw()
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
         fixation.draw()
         
@@ -701,6 +733,9 @@ for trial_number, trial in enumerate(trials):
                 
                     if not hue_changed:
                         ball.color = occluder_color     # The mistake's not here, COLOUR IT SUDDENLY CHANGES INTO
+                        # ball.fillcolor = occluder_color     
+                        # ball_tone.draw()
+                        ball_shade.draw()
 
                         hue_changed = True  # Hue change confirmation toggle
                         print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
@@ -708,7 +743,8 @@ for trial_number, trial in enumerate(trials):
                         
                         # ball.color = interpolate_color(occluder_color, start_color, ball_factor)
                         ball.color = interpolate_color(occluder_color, start_color, ball_factor)
-
+                        # ball_tone.draw()
+                        ball_shade.draw()
                         if np.all(ball.color == occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
                             hue_changed_back = True  # Reset the hue change confirmation toggle 
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None

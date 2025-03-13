@@ -38,7 +38,7 @@ win = visual.Window(
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').
     allowStencil=False,  # Whether to allow stencil buffer (used for advanced graphics).
     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
-    color="black",  # [0, 0, 0],          # The background color of the window (in RGB space).
+    color=[-.5, -.5, -.5],  # [0, 0, 0],          # The background color of the window (in RGB space).
     colorSpace="rgb",  # The color space for the background color (e.g., 'rgb', 'dkl', 'lms').
     backgroundImage="",  # Path to an image file to use as the background.
     backgroundFit="none",  # How to fit the background image ('none', 'fit', 'stretch').
@@ -49,7 +49,7 @@ win = visual.Window(
 
 win_dims = win.size
 
-fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0), height=50)
+fixation = visual.TextStim(win, text="+", color="black", pos=(0, 0), height=50)
 
 ####################################### MAKING A BETTER BALL #############################
 ball = visual.Circle(win, 
@@ -84,19 +84,6 @@ ball_tone = visual.GratingStim(
     opacity=.9,
 )
 
-# # Create a 2D isotropic Gaussian
-# ball_tone = visual.GratingStim(
-#     win=win,
-#     tex='sin',
-#     mask='gauss',
-#     size=(ball_radius, ball_radius),  # Size in pixels
-#     # size=(ball_radius, ball_radius),  # Size in pixels
-#     sf=0,  # Spatial frequency (0 for no grating)
-#     contrast=1,
-#     color='red',
-#     opacity=1,
-# )
-
 # Create a 2D isotropic Gaussian
 ball_glimmer = visual.GratingStim(
     win=win,
@@ -110,9 +97,9 @@ ball_glimmer = visual.GratingStim(
 
 ball_shade = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaq2.png",  # Your pre-made gradient cross image
-    size=(ball_radius*2, ball_radius*2),
-    opacity=.45
+    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaqtop.png",  # Your pre-made gradient cross image
+    size=(ball_radius*2.05, ball_radius*2.05),
+    opacity=.4
 )
 
 
@@ -172,7 +159,7 @@ bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2 * 1.8)) # 1.8 
 
 line_45_bottom = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_45.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos=(bounce_dist, -(bounce_dist)),
     opacity=1
@@ -180,7 +167,7 @@ line_45_bottom = visual.ImageStim(
 
 line_45_top = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_45.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos= (-(bounce_dist), bounce_dist),
     opacity=1
@@ -188,7 +175,7 @@ line_45_top = visual.ImageStim(
 
 line_135_bottom = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_135.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos=(-bounce_dist, -(bounce_dist)),
     opacity=1
@@ -196,7 +183,7 @@ line_135_bottom = visual.ImageStim(
 
 line_135_top = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_135.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos= ((bounce_dist), bounce_dist),
     opacity=1
@@ -227,67 +214,33 @@ outer_cross_vertices = [
     (-occluder_radius / outer_cross_factor, -occluder_radius), (-occluder_radius / outer_cross_factor, -occluder_radius / outer_cross_factor)
 ]
 
-# # Create the cross shape
-# occluder = visual.ShapeStim(
-#     win,
-#     vertices=cross_vertices,
-#     fillColor="grey",
-#     lineColor="grey",
-#     pos=(0, 0),
-#     opacity=occluder_opacity,
-# )
-
-
-# Load an external cross image with gradient already applied
-occluder = visual.ImageStim(
+# Create the cross shape
+occluder = visual.ShapeStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/buizen2.png",  # Your pre-made gradient cross image
-    size=(occluder_radius*2, occluder_radius*2),
+    vertices=cross_vertices,
+    fillColor="grey",
+    lineColor="grey",
     pos=(0, 0),
-    # opacity=occluder_opacity
-    opacity=1
+    opacity=occluder_opacity,
 )
+
+
+# # Load an external cross image with gradient already applied
+# occluder = visual.ImageStim(
+#     win,
+#     image="/Users/wiegerscheurer/Stimulus_material/buizen_green.png",  # Your pre-made gradient cross image
+#     size=(occluder_radius*2, occluder_radius*2),
+#     pos=(0, 0),
+#     opacity=occluder_opacity
+#     # opacity=occluder_opacity
+# )
 
 # # Replace your draw.occluder() with:
 # def draw_occluder():
 #     gradient_cross.draw()
 
 
-##### GRADIENT OCCLUDER::::: WORKS BUT ONLY SQUARE NOW::::
-# # Create a gradient texture
-# def create_gradient_texture(size, inner_color, outer_color):
-#     gradient = np.zeros((size, size, 3))
-#     center = size // 2
-#     max_distance = np.sqrt(2 * (center ** 2))
-    
-#     for y in range(size):
-#         for x in range(size):
-#             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
-#             t = distance / max_distance
-#             gradient[y, x] = (1 - t) * np.array(inner_color) + t * np.array(outer_color)
-    
-#     return gradient
 
-# # Define the size of the texture
-# texture_size = 256
-
-# # Define the inner and outer colors
-# inner_color = [0.5, 0.5, 0.5]  # Light grey
-# outer_color = [0.1, 0.1, 0.1]  # Dark grey
-
-# # Create the gradient texture
-# gradient_texture = create_gradient_texture(texture_size, inner_color, outer_color)
-
-# # Create the occluder with the gradient texture
-# occluder = visual.ImageStim(
-#     win,
-#     image=gradient_texture,
-#     size=(occluder_radius * 2, occluder_radius * 2),
-#     pos=(0, 0),
-#     opacity=occluder_opacity,
-#     interpolate=True
-# )
-########################
 
 # Create the inner outline shape
 inner_outline = visual.ShapeStim(
@@ -333,8 +286,8 @@ left_border = visual.Rect(
     win=win,
     width=(win_dims[0] - square_size) / 2,
     height=win_dims[1],
-    fillColor="grey",
-    lineColor="grey",
+    fillColor="black",
+    lineColor="black",
     pos=[-(win_dims[0] - square_size) / 4 - square_size / 2, 0],
 )
 
@@ -342,8 +295,8 @@ right_border = visual.Rect(
     win=win,
     width=(win_dims[0] - square_size) / 2,
     height=win_dims[1],
-    fillColor="grey",
-    lineColor="grey",
+    fillColor="black",
+    lineColor="black",
     pos=[(win_dims[0] - square_size) / 4 + square_size / 2, 0],
 )
 
@@ -351,8 +304,8 @@ top_border = visual.Rect(
     win=win,
     width=win_dims[0],
     height=(win_dims[1] - square_size) / 2,
-    fillColor="grey",
-    lineColor="grey",
+    fillColor="black",
+    lineColor="black",
     pos=[0, (win_dims[1] - square_size) / 4 + square_size / 2],
 )
 
@@ -360,8 +313,8 @@ bottom_border = visual.Rect(
     win=win,
     width=win_dims[0],
     height=(win_dims[1] - square_size) / 2,
-    fillColor="grey",
-    lineColor="grey",
+    fillColor="black",
+    lineColor="black",
     pos=[0, -(win_dims[1] - square_size) / 4 - square_size / 2],
 )
 
