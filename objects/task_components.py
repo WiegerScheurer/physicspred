@@ -97,7 +97,7 @@ ball_glimmer = visual.GratingStim(
 
 ball_shade = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaqtop.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaqtop.png",  
     size=(ball_radius*2.05, ball_radius*2.05),
     opacity=.4
 )
@@ -258,15 +258,28 @@ inner_outline = visual.ShapeStim(
 #     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
 # )
 
+# Add opacity = .5 to make see-through
+occluder_square = visual.Rect(
+    win,
+    width=occluder_radius * 1.25,
+    height=occluder_radius * 1.25,
+    fillColor="grey",
+    lineColor="grey",
+    pos=(0, 0),
+    opacity=occluder_opacity,
+    ori=45
+)
+
 # # Add opacity = .5 to make see-through
-# occluder = visual.Rect(
+# occluder_square = visual.Rect(
 #     win,
-#     width=2 * occluder_radius,
-#     height=2 * occluder_radius,
+#     width=occluder_radius * 1.5,
+#     height=occluder_radius * 1.5,
 #     fillColor="grey",
 #     lineColor="grey",
 #     pos=(0, 0),
 #     opacity=occluder_opacity,
+#     ori=0
 # )
 
 occluder_glass = visual.Rect(

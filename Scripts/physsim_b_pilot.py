@@ -153,6 +153,7 @@ from objects.task_components import (
     fixation,
     horizontal_lines,
     vertical_lines,    
+    occluder_square,
 )
 
 line_map = {
@@ -202,16 +203,6 @@ square_size = config["square_size"]
 skip_factor = 1
 n_trials = config["n_trials"]  # Number of trials
 
-# Define the options for trial parameters # Annoyingly enough I use top and bottom for interactor location
-# But up and down for ball start location, because those align with arrow button registered keys
-# does align with bottom-up and top-down nomenclature (going up; to the top; going down; to the bottom)
-
-# Equal occurrence frequency of interactor 45, 135 and "none", balanced for ball start location
-# trial_options = ["45_top_r", "45_top_u",
-                #  "45_bottom_l", "45_bottom_d",
-                #  "135_top_l", "135_top_u",
-                #  "135_bottom_r", "135_bottom_d"] + 2 * [f"none_{edge}" for edge in ["l", "r", "u", "d"]]
-                
                 
 #####################OLD CODE #############################                
 # interactor_trial_options = ["45_top_r", "45_top_u",
@@ -284,16 +275,16 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 # Define the start and end colors for the subtle hue change
 # start_color = np.array([1.0, 1.0, 1.0])  # White
 start_color = config["ball_fillcolor"]
-end_color = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
+fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
 # occluder_color = np.array([-0.25, -0.25, -0.25]) # np.array([0.1, 0.1, 0.1])
 # occluder_color = np.array([-.5, -.55, -.5]) # np.array([0.1, 0.1, 0.1])
 # occluder_color = np.array([-.75, -.75, -.75]) # np.array([0.1, 0.1, 0.1])
 # occluder_color = np.array([-1, -1, -1]) # np.array([0.1, 0.1, 0.1])
 
 # occluder_color = np.array([.4, .4, 0]) # np.array([0.1, 0.1, 0.1]) (colour for ball hue change)
-# yellow occluder
 # occluder_color = np.array([.2, .2, -.2])
-occluder_color = np.array([0, .3, 0])
+# occluder_color = np.array([0, .3, 0])
+occluder_color = np.array(config["ball_changecolor"], dtype=float)
 ball_color_new = np.array([0, 0, 0])
 
 
@@ -421,6 +412,7 @@ for trial_number, trial in enumerate(trials):
         line_45_bottom.draw()
     # inner_outline.draw()
     occluder.draw()
+    occluder_square.draw()
     
     
     if config["draw_grid"]:
@@ -597,6 +589,7 @@ for trial_number, trial in enumerate(trials):
                 line.draw()
 
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
+        occluder_square.draw()
         fixation.draw()
         
         win.flip()
@@ -686,48 +679,29 @@ for trial_number, trial in enumerate(trials):
 
                 if task_choice == "Fixation Hue Change" and ball_change and not hue_changed_back:
                     if not hue_changed:
-                        fixation.color = interpolate_color(start_color, end_color, factor)
-                        if np.all(fixation.color == end_color):  # Check if the color has fully changed
+                        fixation.color = interpolate_color(start_color, fixation_changecolor, factor)
+                        if np.all(fixation.color == fixation_changecolor):  # Check if the color has fully changed
                             hue_changed = True  # Hue change confirmation toggle
                             ball_change_moment = trial_clock.getTime()  # Reset the change moment
-                            print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
+                            print(f"KLEUR changed to fixation_changecolor at {trial_clock.getTime()}") if verbose else None
                     else:
                         elapsed_time_inv = trial_clock.getTime() - ball_change_moment
                         factor_inv = min(elapsed_time_inv / duration, 1.0)
-                        fixation.color = interpolate_color(end_color, start_color, factor_inv)
+                        fixation.color = interpolate_color(fixation_changecolor, start_color, factor_inv)
                         if np.all(fixation.color == start_color):  # Check if the color has fully changed back
                             hue_changed_back = True  # Reset the hue change confirmation toggle
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
                             print("Hue change") # if verbose else None
 
-                # elif task_choice == "Ball Speed Change" and ball_change and not speed_changed:
-                #     print(f"Current speed: {compute_speed(velocity):.2f}")
-                #     ball_direction = velocity_to_direction(velocity)
-
-                #     if rand_speed_change == "slower":
-                #         velocity = np.array(slow_directions[_flip_dir(ball_direction)])
-                #     elif rand_speed_change == "faster":
-                #         velocity = np.array(fast_directions[_flip_dir(ball_direction)])
-                #     print(f"New speed: {compute_speed(velocity):.2f}")
-                    
-                # #     speed_changed = True
-
-                # elif task_choice == "Ball Hiccup" and ball_change:
-                #     # This is most likely not necessary, but the speed_changed works as a toggle
-                #     print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
-                #     speed_changed = True
                 
                 if task_choice == "Ball Hue" and ball_change and not hue_changed_back:
-                # elif task_choice == "Ball Grow" and ball_change and crossed_fixation:# and left_occluder:
                 
                     if not hue_changed:
-                        ball.color = occluder_color     # The mistake's not here, COLOUR IT SUDDENLY CHANGES INTO
+                        ball.color = occluder_color  
 
                         hue_changed = True  # Hue change confirmation toggle
-                        print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
-                    else:
-                        
-                        # ball.color = interpolate_color(occluder_color, start_color, ball_factor)
+                        print(f"KLEUR changed to fixation_changecolor at {trial_clock.getTime()}") if verbose else None
+                    else:                        
                         ball.color = interpolate_color(occluder_color, start_color, ball_factor)
 
                         if np.all(ball.color == occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
@@ -752,12 +726,6 @@ for trial_number, trial in enumerate(trials):
             print("ESCAPE PRESSED")
             win.close()
             core.quit()
-        if "r" in toetsen:
-            print("R PRESSED")
-            continue  # Skip to the next trial
-        if "o" in toetsen:
-            print("O PRESSED")
-            occluder_opaque = not occluder_opaque
 
         if toetsen != [] and not responded:  # If toets pressed and not done so before
             print(f"Response: {toetsen[0]}")
@@ -855,18 +823,8 @@ for trial_number, trial in enumerate(trials):
     # Example usage in your existing code
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
-        # this_precision = get_precision(
-        #     intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        # )
-        # this_sensitivity = get_sensitivity(
-        #     intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        # )
-        # this_f1 = get_f1_score(
-        #     intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        # )
-        # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
-        # feedback_text = f'Current accuracy: {(np.mean((this_precision["simulation"], this_precision["abstraction"]))*100):.2f}% changes detected!'
-        feedback_text = f'Current accuracy: {(get_precision(intermit_data, sim_con=None, expol_con=None)*100):.2f}% changes detected!'
+        intermit_rt = np.mean(intermit_data["rt"].dropna())
+        feedback_text = f'Detected changes: {(get_precision(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s'
         
         
         # Show the break with countdown
@@ -875,7 +833,7 @@ for trial_number, trial in enumerate(trials):
         feedback_text = ""
 
     feedback = visual.TextStim(
-        win, text=feedback_text, color="white", pos=(0, 50), height=30
+        win, text=feedback_text, color="white", pos=(0, 100), height=30
     )
     left_border.draw()
     right_border.draw()

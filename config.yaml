@@ -1,7 +1,7 @@
 win_dims: [1920, 1080]
 # win_dims: [3840, 2160]
 # win_dims: [2560, 1440]
-avg_ball_speed: 5.5
+avg_ball_speed: 6.25
 natural_speed_variance: .25 #.5
 # timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
 psychopy_version: "2024.2.4"
@@ -10,37 +10,37 @@ ball_radius: 50
 square_size: 1080 # to work on my laptop for meeting
 interactor_height: 150
 interactor_width: 15
-# occluder_radius: 100 # Used to be 130 
-occluder_radius: 250 #190 # had it at cross size 180 # Used to be 130 
+occluder_radius: 220 #190 # had it at cross size 180 # Used to be 130 
 occluder_opacity: 1 #.5 # 1 is opaque, 0 is transparent
-feedback_freq: 5 # After how many trials there will be a feedback moment
-n_trials: 24
+feedback_freq: 10 # After how many trials there will be a feedback moment
+n_trials: 196
 verbose: false
-# ball_fillcolor: [-0.25, -0.25, -0.25] #"darkgray"
-# ball_fillcolor: [0.55, 0.55, 0.55] #"darkgray"
+
+# Original ball colours
 ball_fillcolor: [.45, .45, .45] #"white"
 ball_linecolor: [.45, .45, .45] #"white"
-# ball_linecolor: [-0.25, -0.25, -0.25] #"darkgray"
-# ball_linecolor: [0.55, 0.55, 0.55] #"darkgray"
+
+# Ball change colour
+ball_changecolor: [.45, .45, .675]
 fixation_color: "black"
 
 
 # Ball speed change parameters:
 ball_speed_change: 1.2
-ball_spawn_spread: 1.8 # smaller is more spread (I think)
+ball_spawn_spread: 1.4 # was 1.8 # smaller is more spread (I think)
 decay_constant: 0.0022
 
 # Fixation task parameters:
 hue_change_duration: 2
-ball_change_duration: .35 #.45
+ball_change_duration: .55 #.45
 
 # Ball hiccup task parameters:
 slow_bounce_skip_factor: 1.6
 fast_bounce_skip_factor: 2.0
 
 # Screen parameters:
-experiment_screen: 0 # 0 is the main screen, 1 is the second screen
-full_screen: false
+experiment_screen: 1 # 0 is the main screen, 1 is the second screen
+full_screen: true
 draw_grid: false
 
 # fMRI parameters (current values based on Ekman paper)
@@ -55,13 +55,13 @@ target_baserate: .5 #.25 # Frequency of target trials. 1 means 1:0, .25 is 1:3, 
 # frame_rate: 0.016666666666 #0.01 is about 75 Hz 66666 # 60 Hz; 1/60
 frame_rate: 0.00833333333 # perhaps 120Hz then? 1/120
 fixation_time: .5
-interactor_time: 1
+interactor_time: 1.75
 occluder_time: .5
-ballmov_time: 4.5 #4.2222 #7
-feedback_time: 1
-mean_iti: 2
-min_iti: 1
-max_iti: 3 
+ballmov_time: 4 # 4.5 #4.2222 #7
+feedback_time: 2
+mean_iti: 1.5
+min_iti: .5
+max_iti: 2.5
 
 exp_parameters:
   - trial_type

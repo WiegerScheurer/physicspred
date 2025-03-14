@@ -7,6 +7,11 @@ import numpy as np
 from itertools import product
 import pandas as pd
 
+import pandas as pd
+import numpy as np
+import random
+from itertools import product
+
 def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed_variance=0.25):
     # Your options
     interactor_trial_options = ["45_top_r", "45_top_u", "45_bottom_l", "45_bottom_d",
@@ -24,6 +29,16 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
         natural_speed_variance
     ))[:3]  # Take only 3 speeds
     
+    
+    # # Updated to 3 different ball speeds
+    # avg_ball_speed = 11
+    # natural_speed_variance = 0.5
+    # ball_speed_options = list(np.arange(
+    #     avg_ball_speed - natural_speed_variance,
+    #     avg_ball_speed + (2 * natural_speed_variance),
+    #     natural_speed_variance
+    # ))[:3]  # Take only 3 speeds
+    
     # Map each empty trial option to a specific bounce direction
     direction_mapping = {
         "none_l": "left",
@@ -31,11 +46,6 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
         "none_u": "left",
         "none_d": "right"
     }
-    
-    # Calculate minimum trials for perfect balance with 3 ball speeds
-    # For interactor: 8 options × 2 bounce × 2 ball_change × 3 speeds = 96 combinations
-    # For empty: 4 options × 2 bounce × 2 ball_change × 3 speeds = 48 combinations
-    # To keep interactor:empty balanced, we need 96 of each = 192 total minimum
     
     # If trial_n is specified, create a balanced subset
     if trial_n is not None:
@@ -50,19 +60,81 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
         all_trials = []
         
         # For interactor trials
+        # First, create all possible combinations
         interactor_combos = list(product(
             interactor_trial_options,
             bounce_options,
             ball_change_options,
             ball_speed_options
         ))
-        # Will need to repeat some combinations if half_n > len(interactor_combos)
-        interactor_subset = [interactor_combos[i % len(interactor_combos)] for i in range(half_n)]
-        random.shuffle(interactor_subset)
+        random.shuffle(interactor_combos)  # Shuffle to avoid bias
         
-        # Create interactor trials
-        for i in range(half_n):
-            trial_option, bounce, ball_change, ball_speed = interactor_subset[i]
+        # Now intelligently select a subset that maximizes balance
+        selected_interactor = []
+        option_counts = {option: 0 for option in interactor_trial_options}
+        bounce_counts = {True: 0, False: 0}
+        change_counts = {True: 0, False: 0}
+        speed_counts = {speed: 0 for speed in ball_speed_options}
+        
+        # First pass: try to get at least one of each option
+        for option in interactor_trial_options:
+            matching_combos = [c for c in interactor_combos if c[0] == option and c not in selected_interactor]
+            if matching_combos:
+                selected_interactor.append(matching_combos[0])
+                option_counts[option] += 1
+                bounce_counts[matching_combos[0][1]] += 1
+                change_counts[matching_combos[0][2]] += 1
+                speed_counts[matching_combos[0][3]] += 1
+        
+        # Second pass: fill in remaining slots balancing bounce and ball_change
+        remaining_slots = half_n - len(selected_interactor)
+        while remaining_slots > 0:
+            # Prioritize by least common option, then bounce, then ball_change
+            min_option_count = min(option_counts.values())
+            min_options = [opt for opt, count in option_counts.items() if count == min_option_count]
+            
+            min_bounce_count = min(bounce_counts.values())
+            min_bounce = [b for b, count in bounce_counts.items() if count == min_bounce_count]
+            
+            min_change_count = min(change_counts.values())
+            min_change = [c for c, count in change_counts.items() if count == min_change_count]
+            
+            # Find combos that match our criteria
+            matching_combos = [c for c in interactor_combos 
+                              if c[0] in min_options 
+                              and c[1] in min_bounce 
+                              and c[2] in min_change 
+                              and c not in selected_interactor]
+            
+            # If no perfect match, relax constraints one by one
+            if not matching_combos:
+                matching_combos = [c for c in interactor_combos 
+                                  if c[0] in min_options 
+                                  and c[1] in min_bounce 
+                                  and c not in selected_interactor]
+            
+            if not matching_combos:
+                matching_combos = [c for c in interactor_combos 
+                                  if c[0] in min_options 
+                                  and c not in selected_interactor]
+            
+            if not matching_combos:
+                matching_combos = [c for c in interactor_combos if c not in selected_interactor]
+            
+            if matching_combos:
+                best_combo = matching_combos[0]
+                selected_interactor.append(best_combo)
+                option_counts[best_combo[0]] += 1
+                bounce_counts[best_combo[1]] += 1
+                change_counts[best_combo[2]] += 1
+                speed_counts[best_combo[3]] += 1
+                remaining_slots -= 1
+            else:
+                # If we somehow run out of unique combinations
+                break
+        
+        # Create the interactor trials from our selection
+        for trial_option, bounce, ball_change, ball_speed in selected_interactor:
             all_trials.append({
                 'trial_type': 'interactor',
                 'trial_option': trial_option,
@@ -72,20 +144,81 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
                 'ball_speed': ball_speed
             })
         
-        # For empty trials
+        # For empty trials, use the same approach
         empty_combos = list(product(
             empty_trial_options,
             bounce_options,
             ball_change_options,
             ball_speed_options
         ))
-        # Will need to repeat some combinations if half_n > len(empty_combos)
-        empty_subset = [empty_combos[i % len(empty_combos)] for i in range(half_n)]
-        random.shuffle(empty_subset)
+        random.shuffle(empty_combos)  # Shuffle to avoid bias
         
-        # Create empty trials
-        for i in range(half_n):
-            trial_option, bounce, ball_change, ball_speed = empty_subset[i]
+        # Now intelligently select a subset that maximizes balance
+        selected_empty = []
+        option_counts = {option: 0 for option in empty_trial_options}
+        bounce_counts = {True: 0, False: 0}
+        change_counts = {True: 0, False: 0}
+        speed_counts = {speed: 0 for speed in ball_speed_options}
+        
+        # First pass: try to get at least one of each option
+        for option in empty_trial_options:
+            matching_combos = [c for c in empty_combos if c[0] == option and c not in selected_empty]
+            if matching_combos:
+                selected_empty.append(matching_combos[0])
+                option_counts[option] += 1
+                bounce_counts[matching_combos[0][1]] += 1
+                change_counts[matching_combos[0][2]] += 1
+                speed_counts[matching_combos[0][3]] += 1
+        
+        # Second pass: fill in remaining slots balancing bounce and ball_change
+        remaining_slots = half_n - len(selected_empty)
+        while remaining_slots > 0:
+            # Prioritize by least common option, then bounce, then ball_change
+            min_option_count = min(option_counts.values())
+            min_options = [opt for opt, count in option_counts.items() if count == min_option_count]
+            
+            min_bounce_count = min(bounce_counts.values())
+            min_bounce = [b for b, count in bounce_counts.items() if count == min_bounce_count]
+            
+            min_change_count = min(change_counts.values())
+            min_change = [c for c, count in change_counts.items() if count == min_change_count]
+            
+            # Find combos that match our criteria
+            matching_combos = [c for c in empty_combos 
+                              if c[0] in min_options 
+                              and c[1] in min_bounce 
+                              and c[2] in min_change 
+                              and c not in selected_empty]
+            
+            # If no perfect match, relax constraints one by one
+            if not matching_combos:
+                matching_combos = [c for c in empty_combos 
+                                  if c[0] in min_options 
+                                  and c[1] in min_bounce 
+                                  and c not in selected_empty]
+            
+            if not matching_combos:
+                matching_combos = [c for c in empty_combos 
+                                  if c[0] in min_options 
+                                  and c not in selected_empty]
+            
+            if not matching_combos:
+                matching_combos = [c for c in empty_combos if c not in selected_empty]
+            
+            if matching_combos:
+                best_combo = matching_combos[0]
+                selected_empty.append(best_combo)
+                option_counts[best_combo[0]] += 1
+                bounce_counts[best_combo[1]] += 1
+                change_counts[best_combo[2]] += 1
+                speed_counts[best_combo[3]] += 1
+                remaining_slots -= 1
+            else:
+                # If we somehow run out of unique combinations
+                break
+        
+        # Create the empty trials from our selection
+        for trial_option, bounce, ball_change, ball_speed in selected_empty:
             bounce_direction = direction_mapping[trial_option] if bounce else None
             all_trials.append({
                 'trial_type': 'empty',
@@ -136,6 +269,137 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
         # Convert to dataframe and shuffle
         df = pd.DataFrame(all_trials)
         return df.sample(frac=1).reset_index(drop=True)
+
+
+# def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed_variance=0.25):
+#     # Your options
+#     interactor_trial_options = ["45_top_r", "45_top_u", "45_bottom_l", "45_bottom_d",
+#                                "135_top_l", "135_top_u", "135_bottom_r", "135_bottom_d"]
+#     empty_trial_options = ["none_l", "none_r", "none_u", "none_d"]
+#     bounce_options = [True, False]
+#     ball_change_options = [True, False]
+    
+#     # Updated to 3 different ball speeds
+#     # avg_ball_speed = 11
+#     # natural_speed_variance = 0.5
+#     ball_speed_options = list(np.arange(
+#         avg_ball_speed - natural_speed_variance,
+#         avg_ball_speed + (2 * natural_speed_variance),
+#         natural_speed_variance
+#     ))[:3]  # Take only 3 speeds
+    
+#     # Map each empty trial option to a specific bounce direction
+#     direction_mapping = {
+#         "none_l": "left",
+#         "none_r": "right",
+#         "none_u": "left",
+#         "none_d": "right"
+#     }
+    
+#     # Calculate minimum trials for perfect balance with 3 ball speeds
+#     # For interactor: 8 options × 2 bounce × 2 ball_change × 3 speeds = 96 combinations
+#     # For empty: 4 options × 2 bounce × 2 ball_change × 3 speeds = 48 combinations
+#     # To keep interactor:empty balanced, we need 96 of each = 192 total minimum
+    
+#     # If trial_n is specified, create a balanced subset
+#     if trial_n is not None:
+#         # Make sure trial_n is even for interactor:empty balance
+#         if trial_n % 2 == 1:
+#             trial_n -= 1
+#             print(f"Adjusted trial count to {trial_n} to maintain balance")
+        
+#         half_n = trial_n // 2  # Half for interactor, half for empty
+        
+#         # Create dataframe to store the balanced design
+#         all_trials = []
+        
+#         # For interactor trials
+#         interactor_combos = list(product(
+#             interactor_trial_options,
+#             bounce_options,
+#             ball_change_options,
+#             ball_speed_options
+#         ))
+#         # Will need to repeat some combinations if half_n > len(interactor_combos)
+#         interactor_subset = [interactor_combos[i % len(interactor_combos)] for i in range(half_n)]
+#         random.shuffle(interactor_subset)
+        
+#         # Create interactor trials
+#         for i in range(half_n):
+#             trial_option, bounce, ball_change, ball_speed = interactor_subset[i]
+#             all_trials.append({
+#                 'trial_type': 'interactor',
+#                 'trial_option': trial_option,
+#                 'bounce': bounce,
+#                 'phant_bounce_direction': None,
+#                 'ball_change': ball_change,
+#                 'ball_speed': ball_speed
+#             })
+        
+#         # For empty trials
+#         empty_combos = list(product(
+#             empty_trial_options,
+#             bounce_options,
+#             ball_change_options,
+#             ball_speed_options
+#         ))
+#         # Will need to repeat some combinations if half_n > len(empty_combos)
+#         empty_subset = [empty_combos[i % len(empty_combos)] for i in range(half_n)]
+#         random.shuffle(empty_subset)
+        
+#         # Create empty trials
+#         for i in range(half_n):
+#             trial_option, bounce, ball_change, ball_speed = empty_subset[i]
+#             bounce_direction = direction_mapping[trial_option] if bounce else None
+#             all_trials.append({
+#                 'trial_type': 'empty',
+#                 'trial_option': trial_option,
+#                 'bounce': bounce,
+#                 'phant_bounce_direction': bounce_direction,
+#                 'ball_change': ball_change,
+#                 'ball_speed': ball_speed
+#             })
+        
+#         # Convert to dataframe and shuffle
+#         df = pd.DataFrame(all_trials)
+#         return df.sample(frac=1).reset_index(drop=True)
+    
+#     # If trial_n is None, create the full balanced design
+#     else:
+#         # Create all possible combinations
+#         all_trials = []
+        
+#         # For interactor trials
+#         for combo in product(interactor_trial_options, bounce_options, ball_change_options, ball_speed_options):
+#             trial_option, bounce, ball_change, ball_speed = combo
+#             all_trials.append({
+#                 'trial_type': 'interactor',
+#                 'trial_option': trial_option,
+#                 'bounce': bounce,
+#                 'phant_bounce_direction': None,
+#                 'ball_change': ball_change,
+#                 'ball_speed': ball_speed
+#             })
+        
+#         # For empty trials - we need to duplicate these to match interactor count
+#         for combo in product(empty_trial_options, bounce_options, ball_change_options, ball_speed_options):
+#             trial_option, bounce, ball_change, ball_speed = combo
+#             bounce_direction = direction_mapping[trial_option] if bounce else None
+            
+#             # Each empty trial combination needs to appear twice to balance with interactor trials
+#             for _ in range(2):
+#                 all_trials.append({
+#                     'trial_type': 'empty',
+#                     'trial_option': trial_option,
+#                     'bounce': bounce,
+#                     'phant_bounce_direction': bounce_direction,
+#                     'ball_change': ball_change,
+#                     'ball_speed': ball_speed
+#                 })
+        
+#         # Convert to dataframe and shuffle
+#         df = pd.DataFrame(all_trials)
+#         return df.sample(frac=1).reset_index(drop=True)
 
 def check_balance(df):
     print(f"Total trials: {len(df)}")
