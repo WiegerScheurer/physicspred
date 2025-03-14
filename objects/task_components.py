@@ -38,7 +38,7 @@ win = visual.Window(
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').
     allowStencil=False,  # Whether to allow stencil buffer (used for advanced graphics).
     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
-    color=[-.5, -.5, -.5],  # [0, 0, 0],          # The background color of the window (in RGB space).
+    color=[-.25, -.25, -.25],  # [0, 0, 0],          # The background color of the window (in RGB space).
     colorSpace="rgb",  # The color space for the background color (e.g., 'rgb', 'dkl', 'lms').
     backgroundImage="",  # Path to an image file to use as the background.
     backgroundFit="none",  # How to fit the background image ('none', 'fit', 'stretch').
@@ -49,7 +49,7 @@ win = visual.Window(
 
 win_dims = win.size
 
-fixation = visual.TextStim(win, text="+", color="black", pos=(0, 0), height=50)
+fixation = visual.TextStim(win, text="+", color=config["fixation_color"], pos=(0, 0), height=50)
 
 ####################################### MAKING A BETTER BALL #############################
 ball = visual.Circle(win, 
@@ -159,7 +159,7 @@ bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2 * 1.8)) # 1.8 
 
 line_45_bottom = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_s.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_white.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos=(bounce_dist, -(bounce_dist)),
     opacity=1
@@ -167,7 +167,7 @@ line_45_bottom = visual.ImageStim(
 
 line_45_top = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_s.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_white.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos= (-(bounce_dist), bounce_dist),
     opacity=1
@@ -175,7 +175,7 @@ line_45_top = visual.ImageStim(
 
 line_135_bottom = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_s.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_white.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos=(-bounce_dist, -(bounce_dist)),
     opacity=1
@@ -183,7 +183,7 @@ line_135_bottom = visual.ImageStim(
 
 line_135_top = visual.ImageStim(
     win,
-    image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_s.png",  # Your pre-made gradient cross image
+    image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_white.png",  # Your pre-made gradient cross image
     size=(interactor_height, interactor_height),
     pos= ((bounce_dist), bounce_dist),
     opacity=1
@@ -218,8 +218,8 @@ outer_cross_vertices = [
 occluder = visual.ShapeStim(
     win,
     vertices=cross_vertices,
-    fillColor="grey",
-    lineColor="grey",
+    fillColor=np.array(config["occluder_color"], dtype=float),
+    lineColor=np.array(config["occluder_color"], dtype=float),
     pos=(0, 0),
     opacity=occluder_opacity,
 )
@@ -263,8 +263,8 @@ occluder_square = visual.Rect(
     win,
     width=occluder_radius * 1.25,
     height=occluder_radius * 1.25,
-    fillColor="grey",
-    lineColor="grey",
+    fillColor=np.array(config["occluder_color"], dtype=float),
+    lineColor=np.array(config["occluder_color"], dtype=float),
     pos=(0, 0),
     opacity=occluder_opacity,
     ori=45

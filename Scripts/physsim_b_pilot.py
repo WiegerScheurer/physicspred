@@ -56,7 +56,7 @@ from functions.physics import (
     will_cross_fixation,
     calculate_decay_factor,
 )
-from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score
+from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score, get_hit_rate
 
 #############################
 from psychopy import core, event, visual
@@ -201,8 +201,8 @@ refreshInformation = visual.TextStim(
 square_size = config["square_size"]
 # square_size = min(win.size)  # Get the smallest dimension of the window
 skip_factor = 1
-n_trials = config["n_trials"]  # Number of trials
-
+n_trials = 196 #config["n_trials"]  # Number of trials
+print(f"Number of trials: {n_trials}")
                 
 #####################OLD CODE #############################                
 # interactor_trial_options = ["45_top_r", "45_top_u",
@@ -247,6 +247,8 @@ edge_options = ["up", "down", "left", "right"]
 # ball_speeds = determine_sequence(n_trials, ball_speed_options, randomised=True)
 ####################################################################################################################
 design_matrix = create_balanced_trial_design(trial_n=n_trials)
+
+check_balance(design_matrix)
 trial_types = list(design_matrix["trial_type"])
 trials = list(design_matrix["trial_option"])
 bounces = list(design_matrix["bounce"])
@@ -286,6 +288,7 @@ fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fi
 # occluder_color = np.array([0, .3, 0])
 occluder_color = np.array(config["ball_changecolor"], dtype=float)
 ball_color_new = np.array([0, 0, 0])
+
 
 
 
@@ -362,6 +365,8 @@ for trial_number, trial in enumerate(trials):
         )
     )
     
+    this_occluder_color = occluder_color
+    np.random.shuffle(this_occluder_color)
     
     ########### DRAW FIXATION CROSS ###########
     left_border.draw()
@@ -485,7 +490,8 @@ for trial_number, trial in enumerate(trials):
     exp_data["interactor"].append(trial)
     exp_data["bounce"].append(bounce)  # Whether the ball will bounce
     exp_data["ball_speed"].append(this_ball_speed)
-
+    exp_data["target_color"].append(this_occluder_color) if ball_change else exp_data["target_color"].append(None)
+    
     # Append None placeholders
     placeholders = [
         "bounce_moment",
@@ -697,14 +703,14 @@ for trial_number, trial in enumerate(trials):
                 if task_choice == "Ball Hue" and ball_change and not hue_changed_back:
                 
                     if not hue_changed:
-                        ball.color = occluder_color  
+                        ball.color = this_occluder_color  
 
                         hue_changed = True  # Hue change confirmation toggle
                         print(f"KLEUR changed to fixation_changecolor at {trial_clock.getTime()}") if verbose else None
                     else:                        
-                        ball.color = interpolate_color(occluder_color, start_color, ball_factor)
+                        ball.color = interpolate_color(this_occluder_color, start_color, ball_factor)
 
-                        if np.all(ball.color == occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
+                        if np.all(ball.color == this_occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
                             hue_changed_back = True  # Reset the hue change confirmation toggle 
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
                             print("Hue change") # if verbose else None
@@ -824,7 +830,7 @@ for trial_number, trial in enumerate(trials):
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
         intermit_rt = np.mean(intermit_data["rt"].dropna())
-        feedback_text = f'Detected changes: {(get_precision(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s'
+        feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s'
         
         
         # Show the break with countdown

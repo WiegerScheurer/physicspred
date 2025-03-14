@@ -12,17 +12,37 @@ import numpy as np
 import random
 from itertools import product
 
-def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed_variance=0.25):
+def create_balanced_trial_design(trial_n=None, avg_ball_speed=6.25, natural_speed_variance=0.25):
+    
+    def _clean_trial_options(df):
+        # For each row, if trial_option starts with "none", keep only the first 6 characters
+        df['trial_option'] = df['trial_option'].apply(
+            lambda x: x[:6] if x.startswith('none_') else x
+        )
+        return df
     # Your options
     interactor_trial_options = ["45_top_r", "45_top_u", "45_bottom_l", "45_bottom_d",
                                "135_top_l", "135_top_u", "135_bottom_r", "135_bottom_d"]
-    empty_trial_options = ["none_l", "none_r", "none_u", "none_d"]
+    # empty_trial_options = ["none_l", "none_r", "none_u", "none_d"] * 2
+    # Option 1: Create 8 truly unique empty trial options
+    empty_trial_options = ["none_l_1", "none_r_1", "none_u_1", "none_d_1", 
+                        "none_l_2", "none_r_2", "none_u_2", "none_d_2"]
+
+
+    directions = ["left", "right"] * 8
+    random.shuffle(directions)
+    
+    # Update the direction mapping
+    direction_mapping = {
+        "none_l_1": directions[0], "none_l_2": directions[1],
+        "none_r_1": directions[2], "none_r_2": directions[3],
+        "none_u_1": directions[4], "none_u_2": directions[5],
+        "none_d_1": directions[6], "none_d_2": directions[7]
+    }
+    
     bounce_options = [True, False]
     ball_change_options = [True, False]
     
-    # Updated to 3 different ball speeds
-    # avg_ball_speed = 11
-    # natural_speed_variance = 0.5
     ball_speed_options = list(np.arange(
         avg_ball_speed - natural_speed_variance,
         avg_ball_speed + (2 * natural_speed_variance),
@@ -40,12 +60,12 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
     # ))[:3]  # Take only 3 speeds
     
     # Map each empty trial option to a specific bounce direction
-    direction_mapping = {
-        "none_l": "left",
-        "none_r": "right",
-        "none_u": "left",
-        "none_d": "right"
-    }
+    # direction_mapping = {
+    #     "none_l": "left",
+    #     "none_r": "right",
+    #     "none_u": "left",
+    #     "none_d": "right"
+    # }
     
     # If trial_n is specified, create a balanced subset
     if trial_n is not None:
@@ -231,7 +251,8 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
         
         # Convert to dataframe and shuffle
         df = pd.DataFrame(all_trials)
-        return df.sample(frac=1).reset_index(drop=True)
+        df.sample(frac=1).reset_index(drop=True)
+        return _clean_trial_options(df)
     
     # If trial_n is None, create the full balanced design
     else:
@@ -266,10 +287,50 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed
                     'ball_speed': ball_speed
                 })
         
+    
         # Convert to dataframe and shuffle
         df = pd.DataFrame(all_trials)
-        return df.sample(frac=1).reset_index(drop=True)
 
+        df.sample(frac=1).reset_index(drop=True)
+        
+        return _clean_trial_options(df)
+            
+        # return output_df.sample(frac=1).reset_index(drop=True)
+        
+def build_design_matrix(n_trials:int, verbose:bool=False):
+    """
+    Build a design matrix for a given number of trials.
+
+    Parameters:
+    - n_trials (int): The total number of trials.
+    - verbose (bool): Whether to print verbose output.
+
+    Returns:
+    - design_matrix (pd.DataFrame): The resulting design matrix.
+    """
+    trials_per_fullmx = 192
+
+    full_matrices = n_trials // trials_per_fullmx
+    remainder = n_trials % trials_per_fullmx
+    
+    if verbose:
+        print(f"Design matrix for {n_trials} trials, constituting {full_matrices} fully balanced matrices and {remainder} trials balanced approximately optimal.")
+    
+    if remainder > 0:
+        initial_dm = create_balanced_trial_design(remainder)
+    else:
+        initial_dm = pd.DataFrame()
+    
+    for full_matrix in range(full_matrices + 1):
+        dm = create_balanced_trial_design(192)
+        if full_matrix == 0:
+            design_matrix = initial_dm
+        else:
+            design_matrix = pd.concat([design_matrix, dm])
+            
+    # Shuffle the rows and reset the index
+    design_matrix = design_matrix.sample(frac=1).reset_index(drop=True)
+    return design_matrix
 
 # def create_balanced_trial_design(trial_n=None, avg_ball_speed=5.5, natural_speed_variance=0.25):
 #     # Your options
