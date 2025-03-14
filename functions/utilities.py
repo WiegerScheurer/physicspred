@@ -49,24 +49,6 @@ def create_balanced_trial_design(trial_n=None, avg_ball_speed=6.25, natural_spee
         natural_speed_variance
     ))[:3]  # Take only 3 speeds
     
-    
-    # # Updated to 3 different ball speeds
-    # avg_ball_speed = 11
-    # natural_speed_variance = 0.5
-    # ball_speed_options = list(np.arange(
-    #     avg_ball_speed - natural_speed_variance,
-    #     avg_ball_speed + (2 * natural_speed_variance),
-    #     natural_speed_variance
-    # ))[:3]  # Take only 3 speeds
-    
-    # Map each empty trial option to a specific bounce direction
-    # direction_mapping = {
-    #     "none_l": "left",
-    #     "none_r": "right",
-    #     "none_u": "left",
-    #     "none_d": "right"
-    # }
-    
     # If trial_n is specified, create a balanced subset
     if trial_n is not None:
         # Make sure trial_n is even for interactor:empty balance

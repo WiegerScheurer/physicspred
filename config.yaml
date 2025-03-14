@@ -14,7 +14,7 @@ occluder_radius: 220 #190 # had it at cross size 180 # Used to be 130
 occluder_opacity: 1 #.5 # 1 is opaque, 0 is transparent
 occluder_color: [-.75, -.75, -.75]
 feedback_freq: 10 # After how many trials there will be a feedback moment
-n_trials: 196
+n_trials: 192
 verbose: false
 
 # Original ball colours
@@ -22,7 +22,7 @@ ball_fillcolor: [.45, .45, .45] #"white"
 ball_linecolor: [.45, .45, .45] #"white"
   
 # Ball change colour
-ball_changecolor: [.45, .45, .695]
+ball_changecolor: [.45, .45, .685]
 fixation_color: "black"
 
 
@@ -33,14 +33,14 @@ decay_constant: 0.0022
 
 # Fixation task parameters:
 hue_change_duration: 2
-ball_change_duration: .50 #.45
+ball_change_duration: .55 #.45
 
 # Ball hiccup task parameters:
 slow_bounce_skip_factor: 1.6
 fast_bounce_skip_factor: 2.0
 
 # Screen parameters:
-experiment_screen: 1 # 0 is the main screen, 1 is the second screen
+experiment_screen: 0 # 0 is the main screen, 1 is the second screen
 full_screen: true
 draw_grid: false
 

@@ -40,6 +40,7 @@ from functions.utilities import (
     balance_over_bool,
     create_balanced_trial_design,
     check_balance,
+    build_design_matrix,
     
 )
 from functions.physics import (
@@ -246,7 +247,8 @@ edge_options = ["up", "down", "left", "right"]
 # )
 # ball_speeds = determine_sequence(n_trials, ball_speed_options, randomised=True)
 ####################################################################################################################
-design_matrix = create_balanced_trial_design(trial_n=n_trials)
+# design_matrix = create_balanced_trial_design(trial_n=n_trials)
+design_matrix = build_design_matrix(n_trials, verbose=True)
 
 check_balance(design_matrix)
 trial_types = list(design_matrix["trial_type"])

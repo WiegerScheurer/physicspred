@@ -283,25 +283,45 @@ def get_rt(df,
 
 
 
-def get_precision(df, 
-           sim_con:bool,
-           expol_con:bool,
-           return_df:bool=False):
+# def get_precision(df, 
+#            sim_con:bool,
+#            expol_con:bool,
+#            return_df:bool=False):
+#     """Precision: True positives / (True positives + False negatives)
+#     Args:
+#         df (pd.dataframe): The data
+#         hypothesis (str): The hypothesis to test. Can be either "simulation", "abstraction" or "both"
+#         include_dubtrials (bool): Whether to include trials where both hypotheses are congruent
+#         return_df (bool): Whether to return the filtered DataFrame instead of the precision value
+    
+#     """        
+#     cond_filt_df = filter_condition(df, sim_con, expol_con)
+        
+#     df_filtered = df[(cond_filt_df['accuracy'].notnull()) & # If a response was given
+#                      (cond_filt_df['response'] != None)] # If a target was shown
+
+#     output = np.mean(df_filtered['accuracy']) if not return_df else df_filtered
+        
+#     return output
+
+def get_precision(df, sim_con, expol_con, return_df):
     """Precision: True positives / (True positives + False negatives)
     Args:
-        df (pd.dataframe): The data
-        hypothesis (str): The hypothesis to test. Can be either "simulation", "abstraction" or "both"
-        include_dubtrials (bool): Whether to include trials where both hypotheses are congruent
-        return_df (bool): Whether to return the filtered DataFrame instead of the precision value
-    
-    """        
+        df (pd.DataFrame): The data
+        sim_con (bool): Simulation condition
+        expol_con (bool): Expol condition
+        return_df (bool): Whether to return the filtered DataFrame
+    """
     cond_filt_df = filter_condition(df, sim_con, expol_con)
-        
-    df_filtered = df[(cond_filt_df['accuracy'].notnull()) & # If a response was given
-                     (cond_filt_df['response'] != None)] # If a target was shown
+    
+    # Ensure the indices match
+    cond_filt_df = cond_filt_df.reindex(df.index)
+    
+    df_filtered = df[(cond_filt_df['accuracy'].notnull()) &  # If a response was given
+                     (cond_filt_df['response'].notnull())]  # If a target was shown
 
     output = np.mean(df_filtered['accuracy']) if not return_df else df_filtered
-        
+
     return output
 
 def get_hit_rate(df, 
