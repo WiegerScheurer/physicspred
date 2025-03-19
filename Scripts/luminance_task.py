@@ -42,6 +42,7 @@ from functions.utilities import (
     check_balance,
     build_design_matrix,
     bellshape_sample,
+    ordinal_sample,
     
 )
 from functions.physics import (
@@ -110,6 +111,14 @@ occluder_radius = config["occluder_radius"]
 verbose = config["verbose"]
 exp_parameters = config["exp_parameters"]
 feedback_freq = config["feedback_freq"]
+
+buttons = ["x", "m"]
+
+random.shuffle(buttons)
+
+button_order = {"lighter": buttons[0],  "darker": buttons[1]}
+
+
 
 exp_data = {par: [] for par in exp_parameters}
 
@@ -211,12 +220,13 @@ edge_options = ["up", "down", "left", "right"]
 
 design_matrix = build_design_matrix(n_trials=n_trials, # Multiple of 160 for now
                                     change_ratio=[True],
-                                    avg_ball_luminance=config["ball_color_mean"], 
-                                    natural_luminance_variance=config["ball_color_sd"],
+                                    ball_color_change_mean=config["ball_color_change_mean"], 
+                                    ball_color_change_sd=config["ball_color_change_sd"],
                                     verbose=True)
 
-check_balance(design_matrix)
+check_balance(design_matrix) if verbose else None
 
+print(f'Ball changes: {list(ordinal_sample(config["ball_color_change_mean"], config["ball_color_change_sd"], n_elements=5, round_decimals=3))}')
 
 trial_types = list(design_matrix["trial_type"])
 trials = list(design_matrix["trial_option"])
@@ -230,7 +240,7 @@ ball_color_changes = list(design_matrix["ball_luminance"])
 # ball_speeds = list(design_matrix["ball_speed"]) # OLD ONE
 ball_speeds = bellshape_sample(float(avg_ball_speed), float(config["natural_speed_variance"]), n_trials)
 
-ball_start_colors = bellshape_sample(float(config["ball_color_mean"]), float(config["natural_luminance_variance"]), n_trials)
+ball_start_colors = bellshape_sample(float(config["ball_start_color_mean"]), float(config["ball_start_color_sd"]), n_trials)
 
 
 
@@ -256,8 +266,17 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 start_color = config["ball_fillcolor"]
 fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
 
-occluder_color = np.array(config["ball_changecolor"], dtype=float)
+# occluder_color = np.array(config["ball_changecolor"], dtype=float)
 
+
+buttons = ["x", "m"]
+random.shuffle(buttons)
+
+button_order = {"lighter": buttons[0],  "darker": buttons[1]}
+
+# list(button_order.keys())[0] == "lighter"
+
+# list(button_order.values())[0] == "x"
 
 # **TASK SELECTION MENU**
 task_choice = None
@@ -288,12 +307,11 @@ explanation_text_speed = visual.TextStim(
         "On top of this square you'll see a small white cross: +  \n"
         "Keep your eyes focused on this cross during the whole trial.\n\n"
         "In some trials, the ball changes colour behind the occluder \n\n"
-        "but quickly turns white again after reappearing.\n\n"
         "You are challenged to detect these changes.\n\n"
-        "When you see a change, press the arrow key to indicate on what\n"
-        "side of the square you saw the brief change of colour.\n\n"
+        f"If the ball becomes lighter, press {button_order['lighter']}\n"
+        f"If the ball becomes darker, press {button_order['darker']}\n\n"
         "Be as fast and accurate as possible!\n\n\n"
-        "We'll unveil your score every 10 trials.\n\n"
+        f"We'll unveil your score every {config['feedback_freq']} trials.\n\n"
         "Press 'Space' to start."
     ),
     color="white",
@@ -313,7 +331,6 @@ while ready_to_start != "SPACE":
 
 
 ball_change_type = "S" if task_choice != "Fixation Hue Change" else "H"
-# task_choice = expInfo["task"][0]
 task_choice = expInfo["task"]
 
 
@@ -321,18 +338,18 @@ for trial_number, trial in enumerate(trials):
     print(f"Trial number: {trial_number + 1}")
     trial_clock = core.Clock()  # Create a clock for the trial
 
-    # start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = (
-    #     get_pos_and_dirs(
-    #         avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
-    #     )
-    # )
-    
+    # TODO: DELETE
     start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = (
         get_pos_and_dirs(
             avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
         )
     )
-    ball_color_change = ball_color_changes[trial_no]
+    
+    ball_start_color = ball_start_colors[trial_number] # These are in single hue values, but grey tones are the same in RGB
+    ball_color_change = ball_color_changes[trial_number]
+    changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
+    
+    ball.color = ball_start_color # Not sure if this works
     
     ########### DRAW FIXATION CROSS ###########
     left_border.draw()
@@ -410,18 +427,15 @@ for trial_number, trial in enumerate(trials):
     print(f"Ball will bounce: {bounces[trial_number]}")
 
     ball.pos = np.array(start_positions[edge])
-    # gaussian.pos = ball.pos
     velocity = np.array(directions[edge])
 
     bounce = bounces[trial_number]  # 50% chance to bounce
     rand_bounce_direction = rand_bounce_directions[trial_number]  # Random 90° phantom bounce direction
-    # rand_speed_change = rand_speed_changes[trial_number]  # 50% chance to slow down or speed up
     ball_change = ball_changes[trial_number]  # 20% probability of target ball change
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
     this_iti = itis[trial_number]  # Random ITI
 
     print(f"Target trial: {ball_change}")
-
 
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
     bounce_moment = None
@@ -456,6 +470,8 @@ for trial_number, trial in enumerate(trials):
     exp_data["interactor"].append(trial)
     exp_data["bounce"].append(bounce)  # Whether the ball will bounce
     exp_data["ball_speed"].append(this_ball_speed)
+    exp_data["ball_start_color"].append(ball_start_color)
+    exp_data["ball_color_change"].append(ball_color_change)
     exp_data["target_color"].append(changed_ball_color) if ball_change else exp_data["target_color"].append(None)
     
     # Append None placeholders
@@ -676,9 +692,8 @@ for trial_number, trial in enumerate(trials):
         )  # Check whether the ball hasn't just continued
         exp_data["end_pos"][-1] = ball_direction  # log end position
 
-        toetsen = event.getKeys(
-            ["space", "left", "right", "up", "down", "escape", "r", "o"]
-        )  # Construction set
+        # toetsen = event.getKeys(["space", "left", "right", "up", "down", "escape", "r", "o"])  # Construction set
+        toetsen = event.getKeys(["space", "x", "m", "escape"])
 
         # **CHECK FOR 'R' TO SKIP TRIAL OR 'ESCAPE' TO QUIT**
         if "escape" in toetsen:
@@ -702,15 +717,32 @@ for trial_number, trial in enumerate(trials):
                     toets_moment - ball_change_moment
                 )  # Log the reaction time
 
+                # if ball_change:  # If there was a target change
+                #     if task_choice[0] == "B" and toetsen[0] in [
+                #         "left",
+                #         "right",
+                #         "up",
+                #         "down",
+                #     ]:
                 if ball_change:  # If there was a target change
-                    if task_choice[0] == "B" and toetsen[0] in [
-                        "left",
-                        "right",
-                        "up",
-                        "down",
-                    ]:
+                    if task_choice[0] == "B" and toetsen[0] in ["x", "m",]:
                         hue_or_speed = "hue" if ball_change_type == "H" else "speed"
-                        exp_data["response"][-1] = toetsen[0]
+                        
+                        if toetsen[0] == button_order["lighter"]: # not sure if this works
+                            this_response = "lighter"
+                                            
+                        elif toetsen[0] == button_order["darker"]:
+                            this_response = "darker"
+                            
+                        if (this_response == "lighter" and ball_color_change > 0) or (this_response == "darker" and ball_color_change < 0):
+                            print(f"Correct! detected a {this_response} ball in {round(toets_moment - ball_change_moment, 3)}s")
+                            correct_response = True
+                        elif ball_color_change == 0:
+                            correct_response = None
+                        
+                        exp_data["response"][-1] = this_response
+                        # exp_data["response"][-1] = toetsen[0]
+                                                
                         exp_data["rt"][-1] = toets_moment - ball_change_moment
                         if toets_moment < ball_change_moment:
                             feedback_text = (
@@ -718,25 +750,24 @@ for trial_number, trial in enumerate(trials):
                             )
                             print(f"Wrong, TOO EARLY")
                             correct_response = False
-                        elif ball_direction == toetsen[0]:
-                            feedback_text = (
-                                f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
-                                if give_feedback
-                                else ""
-                            )
-                            print(
-                                f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
-                            )
-                            correct_response = True
-                        else:
-                            feedback_text = (
-                                f"Wrong direction, should be a hue change of {ball_direction}ward ball"
-                                if give_feedback
-                                else ""
-                            )
-                            print(
-                                f"Wrong direction, should be a hue change of {ball_direction}ward ball"
-                            )
+                        # # elif ball_direction == toetsen[0]: # NOT SURE IF THIS CAN BE COMMENTED OUT FULLY
+                        # #     feedback_text = (
+                        # #         f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                        # #         if give_feedback
+                        # #         else ""
+                        # #     )
+                        # #     print(
+                        # #         f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                        # #     )
+                        # #     correct_response = True
+                        # # elif ball_color_change == toetsen[0]:
+                        # elif correct_response:
+                        #     print(f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s")
+                        #     correct_response = True
+                        
+                        
+                        elif (this_response == "lighter" and ball_color_change < 0) or (this_response == "darker" and ball_color_change > 0):
+                            print(f"Wrong answer, the ball didn't become {this_response}")
                             correct_response = False
                 else:  # If there was nothing to detect
                     print(f"Wrong, there was no change")
@@ -761,6 +792,22 @@ for trial_number, trial in enumerate(trials):
         exp_data["accuracy"][
             -1
         ] = correct_response  # Werkt (misschien nu niet meer, stond eerst hoger)
+        
+        
+        if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
+            intermit_data = pd.DataFrame(exp_data)
+            # intermit_rt = np.mean(intermit_data["rt"].dropna())
+            # feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
+            
+            # Save intermittent data
+            subject_id = expInfo["participant"]
+            task_name = expInfo["task"].lower().replace(" ", "_")
+            
+            
+            
+            
+            # save_performance_data(expInfo["participant"], task_name, intermit_data, intermediate=True)
+            # save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
 
     # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
     for hypothesis in ["abs", "sim"]:
@@ -782,8 +829,14 @@ for trial_number, trial in enumerate(trials):
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
         intermit_rt = np.mean(intermit_data["rt"].dropna())
-        feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s'
-        
+        feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
+        intermit_data.to_csv("/Users/wiegerscheurer/repos/physicspred/data/intermit_data.csv")
+        # # Save intermittent data
+        # subject_id = expInfo["participant"]
+        # task_name = expInfo["task"].lower().replace(" ", "_")
+        # save_performance_data(expInfo["participant"], task_name, intermit_data, intermediate=True)
+        # save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
+
         
         # Show the break with countdown
         show_break(win, duration=10)
@@ -803,21 +856,21 @@ for trial_number, trial in enumerate(trials):
     win.flip()
     core.wait(config["feedback_time"])
 
-    # Reset ball and fixation color to original after each trial
-    ball.fillColor = config["ball_fillcolor"]
-    ball.lineColor = config["ball_linecolor"]
-    fixation.color = config["fixation_color"]
+    # Reset ball and fixation color to original after each trial # Don't need this I think
+    # ball.fillColor = config["ball_fillcolor"]
+    # ball.lineColor = config["ball_linecolor"]
+    # fixation.color = config["fixation_color"]
     
     
-    df = pd.DataFrame(exp_data)
+    # df = pd.DataFrame(exp_data)
 
 
-    if trial_no // 10 == 0:
-        # Save the DataFrame to a CSV file
-        subject_id = expInfo["participant"]
-        task_name = expInfo["task"].lower().replace(" ", "_")
-        save_performance_data(expInfo["participant"], task_name, df, intermediate=True)
-        save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
+    # if trial_no // 10 == 0:
+    #     # Save the DataFrame to a CSV file
+    #     subject_id = expInfo["participant"]
+    #     task_name = expInfo["task"].lower().replace(" ", "_")
+    #     save_performance_data(expInfo["participant"], task_name, intermit_data, intermediate=True)
+    #     save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
 
 win.close()
 

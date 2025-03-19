@@ -549,7 +549,7 @@ def ordinal_sample(mean, step_size, n_elements, plot:bool=False, round_decimals:
 from itertools import product
 
 
-def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False], avg_ball_luminance=.45, natural_luminance_variance=0.05):
+def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False], ball_color_change_mean=.45, ball_color_change_sd=0.05):
     
     def _clean_trial_options(df):
         # For each row, if trial_option starts with "none", keep only the first 6 characters
@@ -582,13 +582,8 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
     # ball_change_options = [True, False]
     ball_change_options = change_ratio
     
-    # ball_luminance_options = list(np.arange(
-    #     avg_ball_luminance - natural_luminance_variance,
-    #     avg_ball_luminance + (2 * natural_luminance_variance),
-    #     natural_luminance_variance
-    # ))[:3]  # Take only 3 luminances
     
-    ball_luminance_options = list(ordinal_sample(avg_ball_luminance, natural_luminance_variance, n_elements=5, round_decimals=3))
+    ball_color_change_options = list(ordinal_sample(ball_color_change_mean, ball_color_change_sd, n_elements=5, round_decimals=3))
     
     
     
@@ -610,7 +605,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
             interactor_trial_options,
             bounce_options,
             ball_change_options,
-            ball_luminance_options
+            ball_color_change_options
         ))
         random.shuffle(interactor_combos)  # Shuffle to avoid bias
         
@@ -619,7 +614,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
         option_counts = {option: 0 for option in interactor_trial_options}
         bounce_counts = {True: 0, False: 0}
         change_counts = {True: 0, False: 0}
-        luminance_counts = {luminance: 0 for luminance in ball_luminance_options}
+        luminance_counts = {luminance: 0 for luminance in ball_color_change_options}
         
         # First pass: try to get at least one of each option
         for option in interactor_trial_options:
@@ -694,7 +689,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
             empty_trial_options,
             bounce_options,
             ball_change_options,
-            ball_luminance_options
+            ball_color_change_options
         ))
         random.shuffle(empty_combos)  # Shuffle to avoid bias
         
@@ -703,7 +698,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
         option_counts = {option: 0 for option in empty_trial_options}
         bounce_counts = {True: 0, False: 0}
         change_counts = {True: 0, False: 0}
-        luminance_counts = {luminance: 0 for luminance in ball_luminance_options}
+        luminance_counts = {luminance: 0 for luminance in ball_color_change_options}
         
         # First pass: try to get at least one of each option
         for option in empty_trial_options:
@@ -785,7 +780,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
         all_trials = []
         
         # For interactor trials
-        for combo in product(interactor_trial_options, bounce_options, ball_change_options, ball_luminance_options):
+        for combo in product(interactor_trial_options, bounce_options, ball_change_options, ball_color_change_options):
             trial_option, bounce, ball_change, ball_luminance = combo
             all_trials.append({
                 'trial_type': 'interactor',
@@ -797,7 +792,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
             })
         
         # For empty trials - we need to duplicate these to match interactor count
-        for combo in product(empty_trial_options, bounce_options, ball_change_options, ball_luminance_options):
+        for combo in product(empty_trial_options, bounce_options, ball_change_options, ball_color_change_options):
             trial_option, bounce, ball_change, ball_luminance = combo
             bounce_direction = direction_mapping[trial_option] if bounce else None
             
@@ -822,7 +817,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
             
         # return output_df.sample(frac=1).reset_index(drop=True)
         
-def build_design_matrix(n_trials:int, change_ratio:list=[True, False], avg_ball_luminance:float=.45, natural_luminance_variance:float=.05, trials_per_fullmx:int | None=None, verbose:bool=False):
+def build_design_matrix(n_trials:int, change_ratio:list=[True, False], ball_color_change_mean:float=.45, ball_color_change_sd:float=.05, trials_per_fullmx:int | None=None, verbose:bool=False):
     """
     Build a design matrix for a given number of trials.
 
@@ -837,8 +832,8 @@ def build_design_matrix(n_trials:int, change_ratio:list=[True, False], avg_ball_
     if trials_per_fullmx is None:
         test_dm = create_balanced_trial_design(trial_n=None, 
                                                change_ratio=change_ratio, 
-                                               avg_ball_luminance=avg_ball_luminance, 
-                                               natural_luminance_variance=natural_luminance_variance)
+                                               ball_color_change_mean=ball_color_change_mean, 
+                                               ball_color_change_sd=ball_color_change_sd)
         trials_per_fullmx = len(test_dm)    
         print(f"Number of trials per full matrix: {trials_per_fullmx}")
 
@@ -849,13 +844,13 @@ def build_design_matrix(n_trials:int, change_ratio:list=[True, False], avg_ball_
         print(f"Design matrix for {n_trials} trials, constituting {full_matrices} fully balanced matrices and {remainder} trials balanced approximately optimal.")
     
     if remainder > 0:
-        initial_dm = create_balanced_trial_design(remainder, change_ratio=change_ratio, avg_ball_luminance=avg_ball_luminance, natural_luminance_variance=natural_luminance_variance)
+        initial_dm = create_balanced_trial_design(remainder, change_ratio=change_ratio, ball_color_change_mean=ball_color_change_mean, ball_color_change_sd=ball_color_change_sd)
     else:
         initial_dm = pd.DataFrame()
     
     for full_matrix in range(full_matrices + 1):
         dm = create_balanced_trial_design(192)
-        dm = create_balanced_trial_design(trials_per_fullmx, change_ratio=change_ratio, avg_ball_luminance=avg_ball_luminance, natural_luminance_variance=natural_luminance_variance)
+        dm = create_balanced_trial_design(trials_per_fullmx, change_ratio=change_ratio, ball_color_change_mean=ball_color_change_mean, ball_color_change_sd=ball_color_change_sd)
         if full_matrix == 0:
             design_matrix = initial_dm
         else:
