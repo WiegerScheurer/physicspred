@@ -41,6 +41,7 @@ from functions.utilities import (
     create_balanced_trial_design,
     check_balance,
     build_design_matrix,
+    bellshape_sample,
     
 )
 from functions.physics import (
@@ -95,7 +96,7 @@ def show_break(win, duration=10):
 
 
 # Load configuration from YAML file (os.par)
-config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config.yaml")
+config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config_lumin.yaml")
 with open(config_path, "r") as file:
     config = yaml.safe_load(file)
 
@@ -130,6 +131,7 @@ expInfo = {
 }
 
 give_feedback = True if expInfo["feedback"] == "Yes" else False
+
 # --- Show participant info dialog --
 dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
 if dlg.OK == False:
@@ -205,58 +207,32 @@ skip_factor = 1
 n_trials = config["n_trials"]  # Number of trials
 print(f"Number of trials: {n_trials}")
                 
-#####################OLD CODE #############################                
-# interactor_trial_options = ["45_top_r", "45_top_u",
-#                             "45_bottom_l", "45_bottom_d",
-#                             "135_top_l", "135_top_u",
-#                             "135_bottom_r", "135_bottom_d"]
-# empty_trial_options = ["none_l", "none_r", "none_u", "none_d"]  # For the none trials
-
-# # 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
 edge_options = ["up", "down", "left", "right"]
-# bounce_options = [True, False]
-# rand_bounce_direction_options = ["left", "right"] * 2
-# random.shuffle(rand_bounce_direction_options)
-# ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
-# rand_speed_change_options = ["slower", "faster"]
-# natural_speed_variance = config["natural_speed_variance"]
 
-
-# ball_speed_options = list(
-#     np.arange(
-#         avg_ball_speed - natural_speed_variance,
-#         avg_ball_speed + (2 * natural_speed_variance),
-#         natural_speed_variance,
-#     )
-# )
-
-# trial_types = determine_sequence(n_trials, [1, 0], randomised=True) # 1 is interactor, 0 is empty trial
-
-# interactor_trials = balance_over_bool(trial_types, interactor_trial_options, randomised=True)
-
-# # Create deterministically randomised; balanced parameter sequences
-# trials = determine_sequence(n_trials, trial_options, randomised=True)
-
-# bounces = determine_sequence(n_trials, bounce_options, randomised=True)
-
-# rand_bounce_directions = get_phantbounce_sequence(trials, rand_bounce_direction_options, randomised=True) # Random phantom bounce direction
-
-# ball_changes = determine_sequence(n_trials, ball_change_options, randomised=True)
-# rand_speed_changes = determine_sequence(
-#     n_trials, rand_speed_change_options, randomised=True
-# )
-# ball_speeds = determine_sequence(n_trials, ball_speed_options, randomised=True)
-####################################################################################################################
-# design_matrix = create_balanced_trial_design(trial_n=n_trials)
-design_matrix = build_design_matrix(n_trials, verbose=True)
+design_matrix = build_design_matrix(n_trials=n_trials, # Multiple of 160 for now
+                                    change_ratio=[True],
+                                    avg_ball_luminance=config["ball_color_mean"], 
+                                    natural_luminance_variance=config["ball_color_sd"],
+                                    verbose=True)
 
 check_balance(design_matrix)
+
+
 trial_types = list(design_matrix["trial_type"])
 trials = list(design_matrix["trial_option"])
 bounces = list(design_matrix["bounce"])
 rand_bounce_directions = list(design_matrix["phant_bounce_direction"])
-ball_changes = list(design_matrix["ball_change"])
-ball_speeds = list(design_matrix["ball_speed"])
+ball_changes = list(design_matrix["ball_change"]) # are all the same
+ball_color_changes = list(design_matrix["ball_luminance"])
+
+###### Works for now but change the build_design_matrix() function so that it doesn't balance
+# over it. Doesn't matter that much, but now it takes it in as a factor (in other words, the 192 should be smaller)
+# ball_speeds = list(design_matrix["ball_speed"]) # OLD ONE
+ball_speeds = bellshape_sample(float(avg_ball_speed), float(config["natural_speed_variance"]), n_trials)
+
+ball_start_colors = bellshape_sample(float(config["ball_color_mean"]), float(config["natural_luminance_variance"]), n_trials)
+
+
 
 ball_spawn_spread = config[
     "ball_spawn_spread"
@@ -277,21 +253,10 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 # INTRODUCE NOVEL PROBLEMS.
 
 # Define the start and end colors for the subtle hue change
-# start_color = np.array([1.0, 1.0, 1.0])  # White
 start_color = config["ball_fillcolor"]
 fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
-# occluder_color = np.array([-0.25, -0.25, -0.25]) # np.array([0.1, 0.1, 0.1])
-# occluder_color = np.array([-.5, -.55, -.5]) # np.array([0.1, 0.1, 0.1])
-# occluder_color = np.array([-.75, -.75, -.75]) # np.array([0.1, 0.1, 0.1])
-# occluder_color = np.array([-1, -1, -1]) # np.array([0.1, 0.1, 0.1])
 
-# occluder_color = np.array([.4, .4, 0]) # np.array([0.1, 0.1, 0.1]) (colour for ball hue change)
-# occluder_color = np.array([.2, .2, -.2])
-# occluder_color = np.array([0, .3, 0])
 occluder_color = np.array(config["ball_changecolor"], dtype=float)
-ball_color_new = np.array([0, 0, 0])
-
-
 
 
 # **TASK SELECTION MENU**
@@ -351,6 +316,7 @@ ball_change_type = "S" if task_choice != "Fixation Hue Change" else "H"
 # task_choice = expInfo["task"][0]
 task_choice = expInfo["task"]
 
+
 for trial_number, trial in enumerate(trials):
     print(f"Trial number: {trial_number + 1}")
     trial_clock = core.Clock()  # Create a clock for the trial
@@ -366,9 +332,7 @@ for trial_number, trial in enumerate(trials):
             avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
         )
     )
-    
-    this_occluder_color = occluder_color
-    np.random.shuffle(this_occluder_color)
+    ball_color_change = ball_color_changes[trial_no]
     
     ########### DRAW FIXATION CROSS ###########
     left_border.draw()
@@ -492,7 +456,7 @@ for trial_number, trial in enumerate(trials):
     exp_data["interactor"].append(trial)
     exp_data["bounce"].append(bounce)  # Whether the ball will bounce
     exp_data["ball_speed"].append(this_ball_speed)
-    exp_data["target_color"].append(this_occluder_color) if ball_change else exp_data["target_color"].append(None)
+    exp_data["target_color"].append(changed_ball_color) if ball_change else exp_data["target_color"].append(None)
     
     # Append None placeholders
     placeholders = [
@@ -703,20 +667,7 @@ for trial_number, trial in enumerate(trials):
 
                 
                 if task_choice == "Ball Hue" and ball_change and not hue_changed_back:
-                
-                    if not hue_changed:
-                        ball.color = this_occluder_color  
-
-                        hue_changed = True  # Hue change confirmation toggle
-                        print(f"KLEUR changed to fixation_changecolor at {trial_clock.getTime()}") if verbose else None
-                    else:                        
-                        ball.color = interpolate_color(this_occluder_color, start_color, ball_factor)
-
-                        if np.all(ball.color == this_occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
-                            hue_changed_back = True  # Reset the hue change confirmation toggle 
-                            print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
-                            print("Hue change") # if verbose else None
-
+                    ball.color = changed_ball_color
 
         ball_direction = velocity_to_direction(velocity)
         bounce_moment = bounced_at if bounce_moment == None else bounce_moment

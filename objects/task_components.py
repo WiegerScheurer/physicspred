@@ -5,6 +5,7 @@ import random
 import numpy as np
 from psychopy import visual, gui, core, data, filters
 
+
 sys.path.append(
     "/Users/wiegerscheurer/repos/physicspred"
 )  # To enable importing from repository folders
@@ -16,7 +17,7 @@ config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config.yaml")
 with open(config_path, "r") as file:
     config = yaml.safe_load(file)
 
-
+occluder_type = config["occluder_type"]  # "square" or "cross"
 # Access parameters from the config dictionary
 win_dims = config['win_dims']
 # ball_speed = config['ball_speed']
@@ -189,8 +190,8 @@ line_135_top = visual.ImageStim(
     opacity=1
 )
 
-from psychopy import visual
 
+################### OCCLUDER ######################
 
 cross_factor = occluder_radius / 65
 # Define the vertices for a cross shape
@@ -221,24 +222,20 @@ occluder = visual.ShapeStim(
     fillColor=np.array(config["occluder_color"], dtype=float),
     lineColor=np.array(config["occluder_color"], dtype=float),
     pos=(0, 0),
-    opacity=occluder_opacity,
+    opacity=occluder_opacity if occluder_type[:5] == "cross" else 0,
 )
 
-
-# # Load an external cross image with gradient already applied
-# occluder = visual.ImageStim(
-#     win,
-#     image="/Users/wiegerscheurer/Stimulus_material/buizen_green.png",  # Your pre-made gradient cross image
-#     size=(occluder_radius*2, occluder_radius*2),
-#     pos=(0, 0),
-#     opacity=occluder_opacity
-#     # opacity=occluder_opacity
-# )
-
-# # Replace your draw.occluder() with:
-# def draw_occluder():
-#     gradient_cross.draw()
-
+# Add opacity = .5 to make see-through
+occluder_square = visual.Rect(
+    win,
+    width=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
+    height=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
+    fillColor=np.array(config["occluder_color"], dtype=float),
+    lineColor=np.array(config["occluder_color"], dtype=float),
+    pos=(0, 0),
+    opacity=occluder_opacity if occluder_type != "cross" else 0,
+    ori=45 if occluder_type == "cross_smooth" else 0
+)
 
 
 
@@ -251,6 +248,7 @@ inner_outline = visual.ShapeStim(
     pos=(0, 0),
     opacity=occluder_opacity,
 )
+
 # Draw the cross shape
 # occluder.draw()
 
@@ -258,17 +256,7 @@ inner_outline = visual.ShapeStim(
 #     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
 # )
 
-# Add opacity = .5 to make see-through
-occluder_square = visual.Rect(
-    win,
-    width=occluder_radius * 1.25,
-    height=occluder_radius * 1.25,
-    fillColor=np.array(config["occluder_color"], dtype=float),
-    lineColor=np.array(config["occluder_color"], dtype=float),
-    pos=(0, 0),
-    opacity=occluder_opacity,
-    ori=45
-)
+
 
 # # Add opacity = .5 to make see-through
 # occluder_square = visual.Rect(

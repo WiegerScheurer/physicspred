@@ -21,6 +21,9 @@ verbose: false
 # Original ball colours
 ball_fillcolor: [.45, .45, .45] #"white"
 ball_linecolor: [.45, .45, .45] #"white"
+# Should become this, so that the start colour is always different
+ball_color_mean: .45
+ball_color_sd: .05
   
 # Ball change colour
 ball_changecolor: [.45, .45, .7]
@@ -61,9 +64,9 @@ interactor_time: 1.75
 occluder_time: .5
 ballmov_time: 4 # 4.5 #4.2222 #7
 feedback_time: 2
-mean_iti: 1.5
-min_iti: .5
-max_iti: 2.5
+mean_iti: .5
+min_iti: 0
+max_iti: 1
 
 exp_parameters:
   - trial_type
