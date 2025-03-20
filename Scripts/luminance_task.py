@@ -826,7 +826,7 @@ for trial_number, trial in enumerate(trials):
         feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
         subject = expInfo["participant"]
         os.makedirs(f"{datadir}{subject}", exist_ok=True)
-        intermit_data.to_csv(f"{datadir}{subject}/intermit_data.csv")
+        intermit_data.to_csv(f"{datadir}/{subject}/intermit_data.csv")
         
         # Show the break with countdown
         show_break(win, duration=10)
