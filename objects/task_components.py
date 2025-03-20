@@ -170,7 +170,7 @@ line_45_bottom = visual.ImageStim(
 line_45_top = visual.ImageStim(
     win,
     # image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_beige.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_beige.png"
+    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_beige.png",
     size=(interactor_height, interactor_height),
     pos= (-(bounce_dist), bounce_dist),
     opacity=1

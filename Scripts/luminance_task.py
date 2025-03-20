@@ -20,7 +20,10 @@ import pandas as pd
 from datetime import datetime
 import os
 import sys
+import time
+
 from psychopy import gui
+start_time = time.time()
 
 sys.path.append(
     "/Users/wiegerscheurer/repos/physicspred"
@@ -825,7 +828,7 @@ for trial_number, trial in enumerate(trials):
         intermit_rt = np.mean(intermit_data["rt"].dropna())
         feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
         subject = expInfo["participant"]
-        os.makedirs(f"{datadir}{subject}", exist_ok=True)
+        os.makedirs(f"{datadir}/{subject}", exist_ok=True)
         intermit_data.to_csv(f"{datadir}/{subject}/intermit_data.csv")
         
         # Show the break with countdown
@@ -871,4 +874,10 @@ subject_id = expInfo["participant"]
 task_name = expInfo["task"].lower().replace(" ", "_")
 save_performance_data(expInfo["participant"], task_name, df, base_dir=datadir)
 save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, base_dir=datadir)
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+# Turn into very simple dataframe including the number of trials and time it took
+timing_df = pd.DataFrame({"n_trials": [n_trials], "time_elapsed": [elapsed_time]})
+timing_df.to_csv(f"{datadir}/{subject}/timing.csv")
 
