@@ -1,9 +1,8 @@
-# TODO: Make change more subtle, and verify based on nearby testing. Make sure pilots
-# perform task when sitting closeby the screen, the distance is crucial. Ideally the 
-# change is uniform in colour. But in that case you should only be able to detect it
-# when you covertly attend to it (directed by intuitive physics). Hence, luminance
-# cannot be too different because this will become more salient and attract your attention.
-
+# TODO: Make change more subtle, and perhaps the square larger. Also think about whether it
+# matters that the background is similar of colour to the ball, whether that makes detection
+# easier, due to a difference in contrast. Overcome? perhaps by getting a coloured background of
+# equal luminance to the ball, or by making the ball a different colour. Maybe I can get a 
+# coloured ball? is that an idea?
 
 from psychopy import (
     visual,
@@ -102,6 +101,8 @@ with open(config_path, "r") as file:
     config = yaml.safe_load(file)
 
 # Access parameters from the config dictionary
+# datadir = "/Users/wiegerscheurer/repos/physicspred/data/"
+datadir = config["datadir"]
 win_dims = config['win_dims']
 avg_ball_speed = config["avg_ball_speed"]
 ball_radius = config["ball_radius"]
@@ -309,7 +310,7 @@ explanation_text_speed = visual.TextStim(
         "In some trials, the ball changes colour behind the occluder \n\n"
         "You are challenged to detect these changes.\n\n"
         f"If the ball becomes lighter, press {button_order['lighter']}\n"
-        f"If the ball becomes darker, press {button_order['darker']}\n\n"
+        f"If the ball becomes darker, press {button_order['darker']}\n"
         "Be as fast and accurate as possible!\n\n\n"
         f"We'll unveil your score every {config['feedback_freq']} trials.\n\n"
         "Press 'Space' to start."
@@ -733,7 +734,7 @@ for trial_number, trial in enumerate(trials):
                                             
                         elif toetsen[0] == button_order["darker"]:
                             this_response = "darker"
-                            
+                        # Reminder: white is [1, 1, 1] and black is [-1, -1, -1]
                         if (this_response == "lighter" and ball_color_change > 0) or (this_response == "darker" and ball_color_change < 0):
                             print(f"Correct! detected a {this_response} ball in {round(toets_moment - ball_change_moment, 3)}s")
                             correct_response = True
@@ -794,20 +795,13 @@ for trial_number, trial in enumerate(trials):
         ] = correct_response  # Werkt (misschien nu niet meer, stond eerst hoger)
         
         
-        if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
-            intermit_data = pd.DataFrame(exp_data)
-            # intermit_rt = np.mean(intermit_data["rt"].dropna())
-            # feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
+        # if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
+        #     intermit_data = pd.DataFrame(exp_data)
+
+        #     # Save intermittent data
+        #     subject_id = expInfo["participant"]
+        #     task_name = expInfo["task"].lower().replace(" ", "_")
             
-            # Save intermittent data
-            subject_id = expInfo["participant"]
-            task_name = expInfo["task"].lower().replace(" ", "_")
-            
-            
-            
-            
-            # save_performance_data(expInfo["participant"], task_name, intermit_data, intermediate=True)
-            # save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
 
     # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
     for hypothesis in ["abs", "sim"]:
@@ -830,13 +824,9 @@ for trial_number, trial in enumerate(trials):
         intermit_data = pd.DataFrame(exp_data)
         intermit_rt = np.mean(intermit_data["rt"].dropna())
         feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
-        intermit_data.to_csv("/Users/wiegerscheurer/repos/physicspred/data/intermit_data.csv")
-        # # Save intermittent data
-        # subject_id = expInfo["participant"]
-        # task_name = expInfo["task"].lower().replace(" ", "_")
-        # save_performance_data(expInfo["participant"], task_name, intermit_data, intermediate=True)
-        # save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
-
+        subject = expInfo["participant"]
+        os.makedirs(f"{datadir}{subject}", exist_ok=True)
+        intermit_data.to_csv(f"{datadir}{subject}/intermit_data.csv")
         
         # Show the break with countdown
         show_break(win, duration=10)
@@ -879,10 +869,6 @@ df = pd.DataFrame(exp_data)
 # Save the DataFrame to a CSV file
 subject_id = expInfo["participant"]
 task_name = expInfo["task"].lower().replace(" ", "_")
-save_performance_data(expInfo["participant"], task_name, df)
-save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True)
-
-
-
-
+save_performance_data(expInfo["participant"], task_name, df, base_dir=datadir)
+save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, base_dir=datadir)
 

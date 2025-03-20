@@ -938,7 +938,7 @@ def count_list_types(list):
     return {i: list.count(i) for i in list}
 
 
-def setup_folders(subject_id, task_name):
+def setup_folders(subject_id, task_name, base_dir="/Users/wiegerscheurer/repos/physicspred/data"):
     """
     Creates the necessary folders for a given subject and task.
 
@@ -949,7 +949,6 @@ def setup_folders(subject_id, task_name):
     Returns:
         str: The path to the task directory.
     """
-    base_dir = "/Users/wiegerscheurer/repos/physicspred/data"
 
     # Create base directory if it doesn't exist
     if not os.path.exists(base_dir):
@@ -964,7 +963,7 @@ def setup_folders(subject_id, task_name):
     return task_dir
 
 
-def save_performance_data(subject_id, task_name, data, design_matrix:bool=False, intermediate:bool=False):
+def save_performance_data(subject_id, task_name, data, design_matrix:bool=False, intermediate:bool=False, base_dir="/Users/wiegerscheurer/repos/physicspred/data"):
     """
     Save performance data to a CSV file.
 
@@ -976,7 +975,7 @@ def save_performance_data(subject_id, task_name, data, design_matrix:bool=False,
     Returns:
         None
     """
-    task_dir = setup_folders(subject_id, task_name)
+    task_dir = setup_folders(subject_id, task_name, base_dir=base_dir)
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"{date_str}.csv" if not design_matrix else "design_matrix.csv"
     filename = f"intermediate.csv" if intermediate else filename
