@@ -49,6 +49,7 @@ from functions.utilities import (
     build_design_matrix,
     bellshape_sample,
     ordinal_sample,
+    oklab_to_rgb,
     
 )
 from functions.physics import (
@@ -343,9 +344,13 @@ for trial_number, trial in enumerate(trials):
     
     ball_start_color = ball_start_colors[trial_number] # These are in single hue values, but grey tones are the same in RGB
     ball_color_change = ball_color_changes[trial_number]
-    changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
+    # changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
+    changed_ball_color = oklab_to_rgb([(ball_start_color + ball_color_change), 0, 0], psychopy_rgb=True) # Here turned into list of RGB values
+    
     start_color = ball_start_color # was config["ball_fillcolor"]
-    ball.color = ball_start_color # Not sure if this works
+    # ball.color = ball_start_color # Not sure if this works
+    
+    ball.color = oklab_to_rgb([ball_start_color, 0, 0], psychopy_rgb=True)
     
     ########### DRAW FIXATION CROSS ###########
     left_border.draw()

@@ -13,22 +13,19 @@ square_size: 1080 # to work on my laptop for meeting
 interactor_height: 150
 interactor_width: 15
 occluder_radius: 240 #190 # had it at cross size 180 # Used to be 130 
-occluder_opacity: 1 #.5 # 1 is opaque, 0 is transparent
+occluder_opacity: 0 #.5 # 1 is opaque, 0 is transparent
 occluder_color: [-1, -1, -1] #[-.55, -.55, -.55]
 occluder_type: "square" # or "cross" or "cross_smooth"
 feedback_freq: 10  # After how many trials there will be a feedback moment
 n_trials: 400
 verbose: false
 
-# Original ball colours
-#ball_fillcolor: [.45, .45, .45] #"white"
-#ball_linecolor: [.45, .45, .45] #"white"
-# Should become this, so that the start colour is always different
-ball_color_change_mean: 0
-ball_color_change_sd: .1675
+# These are all changed to Oklab color space (going from 0 to 1, rather than -1 to 1)
+ball_color_change_mean: 0 # used to be 0, and should still be, stupid
+ball_color_change_sd: .08375 # Used to be .1675
 
-ball_start_color_mean: .15
-ball_start_color_sd: .175
+ball_start_color_mean: .75 #.575 # Used to be .15
+ball_start_color_sd: .0875 # Used to be .175
 
 # Ball change colour
 ball_changecolor: [.45, .45, .7]
