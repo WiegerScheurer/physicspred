@@ -125,7 +125,7 @@ expInfo["date"] = data.getDateStr()  # add a simple timestamp
 expInfo["expName"] = expName
 expInfo["psychopyVersion"] = psychopyVersion
 
-from objects.task_components import (
+from objects.task_components_mac import (
     win,
     ball,
     left_border,

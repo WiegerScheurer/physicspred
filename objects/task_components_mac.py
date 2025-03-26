@@ -39,7 +39,7 @@ win = visual.Window(
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').
     allowStencil=False,  # Whether to allow stencil buffer (used for advanced graphics).
     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
-    color=[-.75, -.75, -.75],  # [0, 0, 0],          # The background color of the window (in RGB space).
+    color=[-.25, -.25, -.25],  # [0, 0, 0],          # The background color of the window (in RGB space).
     colorSpace="rgb",  # The color space for the background color (e.g., 'rgb', 'dkl', 'lms').
     backgroundImage="",  # Path to an image file to use as the background.
     backgroundFit="none",  # How to fit the background image ('none', 'fit', 'stretch').
@@ -55,8 +55,8 @@ fixation = visual.TextStim(win, text="+", color=config["fixation_color"], pos=(0
 ####################################### MAKING A BETTER BALL #############################
 ball = visual.Circle(win, 
                      radius=ball_radius, 
-                     fillColor="white",#config["ball_fillcolor"], 
-                     lineColor="white", #config["ball_linecolor"], 
+                     fillColor=config["ball_fillcolor"], 
+                     lineColor=config["ball_linecolor"], 
                      interpolate=True,
                      opacity=1)
 
@@ -96,12 +96,12 @@ ball_glimmer = visual.GratingStim(
     color='white',
 )
 
-# ball_shade = visual.ImageStim(
-#    win,
-#    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaqtop.png",  
-#    size=(ball_radius*2.05, ball_radius*2.05),
-#    opacity=.4
-#)
+ball_shade = visual.ImageStim(
+    win,
+    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaqtop.png",  
+    size=(ball_radius*2.05, ball_radius*2.05),
+    opacity=.4
+)
 
 
 # Calculate the offset
@@ -161,7 +161,7 @@ bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2 * 1.8)) # 1.8 
 line_45_bottom = visual.ImageStim(
     win,
     # image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_beige.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png",
+    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_beige.png",
     size=(interactor_height, interactor_height),
     pos=(bounce_dist, -(bounce_dist)),
     opacity=1
@@ -169,8 +169,8 @@ line_45_bottom = visual.ImageStim(
 
 line_45_top = visual.ImageStim(
     win,
-    # image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_white.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png",
+    # image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_beige.png", 
+    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_beige.png",
     size=(interactor_height, interactor_height),
     pos= (-(bounce_dist), bounce_dist),
     opacity=1
@@ -178,8 +178,8 @@ line_45_top = visual.ImageStim(
 
 line_135_bottom = visual.ImageStim(
     win,
-    # image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_white.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png",
+    # image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_beige.png", 
+    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_beige.png",
     size=(interactor_height, interactor_height),
     pos=(-bounce_dist, -(bounce_dist)),
     opacity=1
@@ -187,8 +187,8 @@ line_135_bottom = visual.ImageStim(
 
 line_135_top = visual.ImageStim(
     win,
-    # image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_white.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png",
+    # image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_beige.png", 
+    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_beige.png",
     size=(interactor_height, interactor_height),
     pos= ((bounce_dist), bounce_dist),
     opacity=1

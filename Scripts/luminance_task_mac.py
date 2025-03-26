@@ -1,9 +1,8 @@
-# TODO: Make change more subtle, and verify based on nearby testing. Make sure pilots
-# perform task when sitting closeby the screen, the distance is crucial. Ideally the 
-# change is uniform in colour. But in that case you should only be able to detect it
-# when you covertly attend to it (directed by intuitive physics). Hence, luminance
-# cannot be too different because this will become more salient and attract your attention.
-
+# TODO: Make change more subtle, and perhaps the square larger. Also think about whether it
+# matters that the background is similar of colour to the ball, whether that makes detection
+# easier, due to a difference in contrast. Overcome? perhaps by getting a coloured background of
+# equal luminance to the ball, or by making the ball a different colour. Maybe I can get a 
+# coloured ball? is that an idea?
 
 from psychopy import (
     visual,
@@ -21,7 +20,10 @@ import pandas as pd
 from datetime import datetime
 import os
 import sys
+import time
+
 from psychopy import gui
+start_time = time.time()
 
 sys.path.append(
     "/Users/wiegerscheurer/repos/physicspred"
@@ -37,6 +39,12 @@ from functions.utilities import (
     truncated_exponential_decay,
     two_sided_truncated_exponential,
     get_phantbounce_sequence,
+    balance_over_bool,
+    create_balanced_trial_design,
+    check_balance,
+    build_design_matrix,
+    bellshape_sample,
+    ordinal_sample,
     
 )
 from functions.physics import (
@@ -53,7 +61,7 @@ from functions.physics import (
     will_cross_fixation,
     calculate_decay_factor,
 )
-from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score
+from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_score, get_hit_rate
 
 #############################
 from psychopy import core, event, visual
@@ -91,11 +99,13 @@ def show_break(win, duration=10):
 
 
 # Load configuration from YAML file (os.par)
-config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config.yaml")
+config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config_lumin.yaml")
 with open(config_path, "r") as file:
     config = yaml.safe_load(file)
 
 # Access parameters from the config dictionary
+# datadir = "/Users/wiegerscheurer/repos/physicspred/data/"
+datadir = config["datadir"]
 win_dims = config['win_dims']
 avg_ball_speed = config["avg_ball_speed"]
 ball_radius = config["ball_radius"]
@@ -105,6 +115,14 @@ occluder_radius = config["occluder_radius"]
 verbose = config["verbose"]
 exp_parameters = config["exp_parameters"]
 feedback_freq = config["feedback_freq"]
+
+buttons = ["x", "m"]
+
+random.shuffle(buttons)
+
+button_order = {"lighter": buttons[0],  "darker": buttons[1]}
+
+
 
 exp_data = {par: [] for par in exp_parameters}
 
@@ -126,6 +144,7 @@ expInfo = {
 }
 
 give_feedback = True if expInfo["feedback"] == "Yes" else False
+
 # --- Show participant info dialog --
 dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
 if dlg.OK == False:
@@ -150,11 +169,7 @@ from objects.task_components_mac import (
     fixation,
     horizontal_lines,
     vertical_lines,    
-    gaussian,
-    ball_tone,
-    ball_glimmer,
-    ball_shade,
-    fixation_outline,
+    occluder_square,
 )
 
 line_map = {
@@ -175,7 +190,7 @@ expInfo["frameRate"] = win.getActualFrameRate()
 if expInfo["frameRate"] != None:
     frameDur = 1.0 / round(expInfo["frameRate"])
 else:
-    frameDur = 1.0 / 60.0  # could not measure, so guess
+    frameDur = 1.0 / 120.0  # could not measure, so guess
 
 # get screen Hz for adjusting animations later
 # gets your refresh rate and stores it in the frame rate object
@@ -203,46 +218,35 @@ square_size = config["square_size"]
 # square_size = min(win.size)  # Get the smallest dimension of the window
 skip_factor = 1
 n_trials = config["n_trials"]  # Number of trials
-
-# Define the options for trial parameters # Annoyingly enough I use top and bottom for interactor location
-# But up and down for ball start location, because those align with arrow button registered keys
-# does align with bottom-up and top-down nomenclature (going up; to the top; going down; to the bottom)
-
-# Equal occurrence frequency of interactor 45, 135 and "none", balanced for ball start location
-trial_options = ["45_top_r", "45_top_u",
-                 "45_bottom_l", "45_bottom_d",
-                 "135_top_l", "135_top_u",
-                 "135_bottom_r", "135_bottom_d"] + 2 * [f"none_{edge}" for edge in ["l", "r", "u", "d"]]
-
-# 4 * ["none"] ### FIX THAT NONE TRIALS DON'T GET A EDGE NOW BEECAUSE NO ____
+print(f"Number of trials: {n_trials}")
+                
 edge_options = ["up", "down", "left", "right"]
-bounce_options = [True, False]
-rand_bounce_direction_options = ["left", "right"] * 2
-random.shuffle(rand_bounce_direction_options)
-ball_change_options = [True] * 1 + [False] * int((1 / config["target_baserate"]) - 1)
-rand_speed_change_options = ["slower", "faster"]
-natural_speed_variance = config["natural_speed_variance"]
+
+design_matrix = build_design_matrix(n_trials=n_trials, # Multiple of 160 for now
+                                    change_ratio=[True],
+                                    ball_color_change_mean=config["ball_color_change_mean"], 
+                                    ball_color_change_sd=config["ball_color_change_sd"],
+                                    verbose=True)
+
+check_balance(design_matrix) if verbose else None
+
+print(f'Ball changes: {list(ordinal_sample(config["ball_color_change_mean"], config["ball_color_change_sd"], n_elements=5, round_decimals=3))}')
+
+trial_types = list(design_matrix["trial_type"])
+trials = list(design_matrix["trial_option"])
+bounces = list(design_matrix["bounce"])
+rand_bounce_directions = list(design_matrix["phant_bounce_direction"])
+ball_changes = list(design_matrix["ball_change"]) # are all the same
+ball_color_changes = list(design_matrix["ball_luminance"])
+
+###### Works for now but change the build_design_matrix() function so that it doesn't balance
+# over it. Doesn't matter that much, but now it takes it in as a factor (in other words, the 192 should be smaller)
+# ball_speeds = list(design_matrix["ball_speed"]) # OLD ONE
+ball_speeds = bellshape_sample(float(avg_ball_speed), float(config["natural_speed_variance"]), n_trials)
+
+ball_start_colors = bellshape_sample(float(config["ball_start_color_mean"]), float(config["ball_start_color_sd"]), n_trials)
 
 
-ball_speed_options = list(
-    np.arange(
-        avg_ball_speed - natural_speed_variance,
-        avg_ball_speed + (2 * natural_speed_variance),
-        natural_speed_variance,
-    )
-)
-
-# Create deterministically randomised; balanced parameter sequences
-trials = determine_sequence(n_trials, trial_options, randomised=True)
-bounces = determine_sequence(n_trials, bounce_options, randomised=True)
-
-rand_bounce_directions = get_phantbounce_sequence(trials, rand_bounce_direction_options)
-
-ball_changes = determine_sequence(n_trials, ball_change_options, randomised=True)
-rand_speed_changes = determine_sequence(
-    n_trials, rand_speed_change_options, randomised=True
-)
-ball_speeds = determine_sequence(n_trials, ball_speed_options, randomised=True)
 
 ball_spawn_spread = config[
     "ball_spawn_spread"
@@ -263,21 +267,20 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 # INTRODUCE NOVEL PROBLEMS.
 
 # Define the start and end colors for the subtle hue change
-# start_color = np.array([1.0, 1.0, 1.0])  # White
 start_color = config["ball_fillcolor"]
-end_color = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
-# occluder_color = np.array([-0.25, -0.25, -0.25]) # np.array([0.1, 0.1, 0.1])
-# occluder_color = np.array([-.5, -.55, -.5]) # np.array([0.1, 0.1, 0.1])
-# occluder_color = np.array([-.75, -.75, -.75]) # np.array([0.1, 0.1, 0.1])
-# occluder_color = np.array([-1, -1, -1]) # np.array([0.1, 0.1, 0.1])
+fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
 
-# occluder_color = np.array([.4, .4, 0]) # np.array([0.1, 0.1, 0.1]) (colour for ball hue change)
-# yellow occluder
-# occluder_color = np.array([.2, .2, -.2])
-occluder_color = np.array([0, .4, 0])
-ball_color_new = np.array([0, 0, 0])
+# occluder_color = np.array(config["ball_changecolor"], dtype=float)
 
 
+buttons = ["x", "m"]
+random.shuffle(buttons)
+
+button_order = {"lighter": buttons[0],  "darker": buttons[1]}
+
+# list(button_order.keys())[0] == "lighter"
+
+# list(button_order.values())[0] == "x"
 
 # **TASK SELECTION MENU**
 task_choice = None
@@ -308,12 +311,11 @@ explanation_text_speed = visual.TextStim(
         "On top of this square you'll see a small white cross: +  \n"
         "Keep your eyes focused on this cross during the whole trial.\n\n"
         "In some trials, the ball changes colour behind the occluder \n\n"
-        "but quickly turns white again after reappearing.\n\n"
         "You are challenged to detect these changes.\n\n"
-        "When you see a change, press the arrow key to indicate on what\n"
-        "side of the square you saw the brief change of colour.\n\n"
+        f"If the ball becomes lighter, press {button_order['lighter']}\n"
+        f"If the ball becomes darker, press {button_order['darker']}\n"
         "Be as fast and accurate as possible!\n\n\n"
-        "We'll unveil your score every 10 trials.\n\n"
+        f"We'll unveil your score every {config['feedback_freq']} trials.\n\n"
         "Press 'Space' to start."
     ),
     color="white",
@@ -333,18 +335,25 @@ while ready_to_start != "SPACE":
 
 
 ball_change_type = "S" if task_choice != "Fixation Hue Change" else "H"
-# task_choice = expInfo["task"][0]
 task_choice = expInfo["task"]
+
 
 for trial_number, trial in enumerate(trials):
     print(f"Trial number: {trial_number + 1}")
     trial_clock = core.Clock()  # Create a clock for the trial
 
+    # TODO: DELETE
     start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = (
         get_pos_and_dirs(
             avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
         )
     )
+    
+    ball_start_color = ball_start_colors[trial_number] # These are in single hue values, but grey tones are the same in RGB
+    ball_color_change = ball_color_changes[trial_number]
+    changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
+    
+    ball.color = ball_start_color # Not sure if this works
     
     ########### DRAW FIXATION CROSS ###########
     left_border.draw()
@@ -395,6 +404,7 @@ for trial_number, trial in enumerate(trials):
         line_45_bottom.draw()
     # inner_outline.draw()
     occluder.draw()
+    occluder_square.draw()
     
     
     if config["draw_grid"]:
@@ -421,18 +431,15 @@ for trial_number, trial in enumerate(trials):
     print(f"Ball will bounce: {bounces[trial_number]}")
 
     ball.pos = np.array(start_positions[edge])
-    # gaussian.pos = ball.pos
     velocity = np.array(directions[edge])
 
     bounce = bounces[trial_number]  # 50% chance to bounce
     rand_bounce_direction = rand_bounce_directions[trial_number]  # Random 90° phantom bounce direction
-    rand_speed_change = rand_speed_changes[trial_number]  # 50% chance to slow down or speed up
     ball_change = ball_changes[trial_number]  # 20% probability of target ball change
     this_ball_speed = ball_speeds[trial_number]  # Random ball speed
     this_iti = itis[trial_number]  # Random ITI
 
-    print(f"Target trial: {ball_change}, Speed change: {rand_speed_change}")
-
+    print(f"Target trial: {ball_change}")
 
     ball_change_delay = 0  # random.uniform(0, 0)  # Random delay for hue change
     bounce_moment = None
@@ -447,6 +454,7 @@ for trial_number, trial in enumerate(trials):
     hue_changed = False
     hue_changed_back = False
     pre_bounce_velocity = None
+    bounced_phantomly = False
     
     trial_duration = (config["fixation_time"] + 
                       config["interactor_time"] + 
@@ -460,11 +468,16 @@ for trial_number, trial in enumerate(trials):
 
     ##################### NEW CODE, integrate with stuff abocve, where I intiisalise the exp_data
     # Store trial characteristics
-    exp_data["trial"].append(len(exp_data["trial"]) + 1)
+    trial_no = len(exp_data["trial"]) + 1
+    exp_data["trial"].append(trial_no)
+    exp_data["trial_type"].append(trial_types[trial_no - 1])
     exp_data["interactor"].append(trial)
     exp_data["bounce"].append(bounce)  # Whether the ball will bounce
     exp_data["ball_speed"].append(this_ball_speed)
-
+    exp_data["ball_start_color"].append(ball_start_color)
+    exp_data["ball_color_change"].append(ball_color_change)
+    exp_data["target_color"].append(changed_ball_color) if ball_change else exp_data["target_color"].append(None)
+    
     # Append None placeholders
     placeholders = [
         "bounce_moment",
@@ -491,11 +504,6 @@ for trial_number, trial in enumerate(trials):
     exp_data["random_bounce_direction"].append(
         rand_bounce_direction if bounce and trial[:4] == "none" else None # CHANGED HERE
     )
-    exp_data["speed_change"].append(
-        rand_speed_change
-        if ball_change and task_choice[0] == "B" and ball_change_type == "S"
-        else None
-    )
 
     # Append remaining values
     exp_data["ball_change"].append(ball_change)
@@ -514,28 +522,6 @@ for trial_number, trial in enumerate(trials):
         decay_factor = calculate_decay_factor(this_ball_speed, ballmov_time, trial_duration, constant=config["decay_constant"])
         velocity = [velocity[0] * decay_factor, velocity[1] * decay_factor] 
         ball.pos += tuple([velocity[0] * skip_factor, velocity[1] * skip_factor])
-        # put the gaussian slightly ahead of the ball
-        gaussian.pos = ball.pos + np.array([0, -.9*ball_radius]) # np.array([velocity[0] * 0.1, velocity[1] * 0.1])
-        
-        # ######## Realistic ight source tryout ########
-        # Define the position of the light source (top right of the screen)
-        
-        ball_shade.pos = ball.pos
-        
-        # Calculate the angle using arctan2
-        light_input = square_size #win.size[1]
-        # angle_radians = np.arctan2((light_input - (ball.pos[1] + 0.5 * light_input)), ball.pos[0] + 0.5 * light_input)
-        angle_radians = np.arctan2(ball.pos[0] + 0.5 * light_input, (2 * light_input - (ball.pos[1] + 0.5 * light_input))) # np.arctan2(y, x), because of triangle interested in
-
-        # trans_pos_x = ball.pos[0] + 0.5 * light_input
-        # trans_pos_y = ball.pos[1] + 0.5 * light_input
-
-        # print(f"real coordinates ball: x={trans_pos_x:.2f} y={trans_pos_y:.2f}")        
-        # Convert the angle from radians to degrees
-        angle_degrees = np.degrees(angle_radians)
-
-        # Set the orientation of the ball_shade
-        ball_shade.ori = -angle_degrees
                 
         # Update elapsed time (assuming you have a way to measure time, e.g., using a clock)
         ballmov_time += config["frame_rate"]  # time_step should be the time increment per loop iteration
@@ -574,13 +560,8 @@ for trial_number, trial in enumerate(trials):
             bounce = False  # Prevent double bouncing
             crossed_fixation = True
 
-        # Draw everything each frame
-        # gaussian.draw()
-        
+        # Draw on each frame
         ball.draw()
-        # ball_tone.draw() #if not hue_changed else None
-        ball_shade.draw()
-        # ball_glimmer.draw()
         left_border.draw()
         right_border.draw()
         top_border.draw()
@@ -598,26 +579,15 @@ for trial_number, trial in enumerate(trials):
         if config["draw_grid"]:
             for line in horizontal_lines + vertical_lines:
                 line.draw()
-        # inner_outline.draw()
+
         occluder.draw() # if occluder_opaque else occluder_glass.draw()
+        occluder_square.draw()
         fixation.draw()
         
         win.flip()
         core.wait(config["frame_rate"])  # Smooth animation, for 60 Hz do (1/60) which is 0.0166667
 
-        if (task_choice == "Ball Hiccup" and
-            # rand_speed_change == "faster" and
-            ball_change and
-            not speed_changed and
-            # np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.5)):
-            np.linalg.norm(ball.pos) < occluder_radius - (ball_radius * 1.1)): # If ball fully behind occluder, change speed briefly
-            if rand_speed_change == "faster":
-                skip_factor = config["fast_bounce_skip_factor"]
-            else:
-                skip_factor = (1/config["slow_bounce_skip_factor"])
-
-        else:
-            skip_factor = 1
+        skip_factor = 1 # leftover from old ball hiccup implementation, but move upwads later on
             
 
         if will_cross_fixation(ball.pos, velocity, skip_factor):
@@ -648,8 +618,11 @@ for trial_number, trial in enumerate(trials):
                     velocity = _dir_to_velocity(
                         _rotate_90(_flip_dir(edge), "right"), pre_bounce_velocity 
                     )  # Reflect off 135
-                    
-            elif not bounce:
+                
+                bounced_phantomly = True
+                bounce_moment = (trial_clock.getTime()) 
+                
+            elif not bounce and not bounced_phantomly:
                 bounce_moment = (
                     trial_clock.getTime()
                 )  # if bounce_moment == None else bounce_moment # MAYBE WILL DO THE TRICK
@@ -670,7 +643,8 @@ for trial_number, trial in enumerate(trials):
             occluder_exit_moment = trial_clock.getTime()
             left_occluder = True
 
-        elif (
+        # elif (
+        if (
             bounce == False
         ):  # If the ball has bounced, or won't bounce at all (for continuation)
             if (
@@ -697,59 +671,23 @@ for trial_number, trial in enumerate(trials):
 
                 if task_choice == "Fixation Hue Change" and ball_change and not hue_changed_back:
                     if not hue_changed:
-                        fixation.color = interpolate_color(start_color, end_color, factor)
-                        if np.all(fixation.color == end_color):  # Check if the color has fully changed
+                        fixation.color = interpolate_color(start_color, fixation_changecolor, factor)
+                        if np.all(fixation.color == fixation_changecolor):  # Check if the color has fully changed
                             hue_changed = True  # Hue change confirmation toggle
                             ball_change_moment = trial_clock.getTime()  # Reset the change moment
-                            print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
+                            print(f"KLEUR changed to fixation_changecolor at {trial_clock.getTime()}") if verbose else None
                     else:
                         elapsed_time_inv = trial_clock.getTime() - ball_change_moment
                         factor_inv = min(elapsed_time_inv / duration, 1.0)
-                        fixation.color = interpolate_color(end_color, start_color, factor_inv)
+                        fixation.color = interpolate_color(fixation_changecolor, start_color, factor_inv)
                         if np.all(fixation.color == start_color):  # Check if the color has fully changed back
                             hue_changed_back = True  # Reset the hue change confirmation toggle
                             print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
                             print("Hue change") # if verbose else None
 
-                elif task_choice == "Ball Speed Change" and ball_change and not speed_changed:
-                    print(f"Current speed: {compute_speed(velocity):.2f}")
-                    ball_direction = velocity_to_direction(velocity)
-
-                    if rand_speed_change == "slower":
-                        velocity = np.array(slow_directions[_flip_dir(ball_direction)])
-                    elif rand_speed_change == "faster":
-                        velocity = np.array(fast_directions[_flip_dir(ball_direction)])
-                    print(f"New speed: {compute_speed(velocity):.2f}")
-                    
-                    speed_changed = True
-
-                elif task_choice == "Ball Hiccup" and ball_change:
-                    # This is most likely not necessary, but the speed_changed works as a toggle
-                    print(f"{task_choice}: {rand_speed_change} speed") if speed_changed is not True else None        
-                    speed_changed = True
                 
                 if task_choice == "Ball Hue" and ball_change and not hue_changed_back:
-                # elif task_choice == "Ball Grow" and ball_change and crossed_fixation:# and left_occluder:
-                
-                    if not hue_changed:
-                        ball.color = occluder_color     # The mistake's not here, COLOUR IT SUDDENLY CHANGES INTO
-                        # ball.fillcolor = occluder_color     
-                        # ball_tone.draw()
-                        ball_shade.draw()
-
-                        hue_changed = True  # Hue change confirmation toggle
-                        print(f"KLEUR changed to end_color at {trial_clock.getTime()}") if verbose else None
-                    else:
-                        
-                        # ball.color = interpolate_color(occluder_color, start_color, ball_factor)
-                        ball.color = interpolate_color(occluder_color, start_color, ball_factor)
-                        # ball_tone.draw()
-                        ball_shade.draw()
-                        if np.all(ball.color == occluder_color):  # Check if the color has fully changed back # CHECK IF THIS SHIT IS CORRECT
-                            hue_changed_back = True  # Reset the hue change confirmation toggle 
-                            print(f"KLEUR changed back to start_color at {trial_clock.getTime()}") if verbose else None
-                            print("Hue change") # if verbose else None
-
+                    ball.color = changed_ball_color
 
         ball_direction = velocity_to_direction(velocity)
         bounce_moment = bounced_at if bounce_moment == None else bounce_moment
@@ -758,21 +696,14 @@ for trial_number, trial in enumerate(trials):
         )  # Check whether the ball hasn't just continued
         exp_data["end_pos"][-1] = ball_direction  # log end position
 
-        toetsen = event.getKeys(
-            ["space", "left", "right", "up", "down", "escape", "r", "o"]
-        )  # Construction set
+        # toetsen = event.getKeys(["space", "left", "right", "up", "down", "escape", "r", "o"])  # Construction set
+        toetsen = event.getKeys(["space", "x", "m", "escape"])
 
         # **CHECK FOR 'R' TO SKIP TRIAL OR 'ESCAPE' TO QUIT**
         if "escape" in toetsen:
             print("ESCAPE PRESSED")
             win.close()
             core.quit()
-        if "r" in toetsen:
-            print("R PRESSED")
-            continue  # Skip to the next trial
-        if "o" in toetsen:
-            print("O PRESSED")
-            occluder_opaque = not occluder_opaque
 
         if toetsen != [] and not responded:  # If toets pressed and not done so before
             print(f"Response: {toetsen[0]}")
@@ -790,15 +721,32 @@ for trial_number, trial in enumerate(trials):
                     toets_moment - ball_change_moment
                 )  # Log the reaction time
 
+                # if ball_change:  # If there was a target change
+                #     if task_choice[0] == "B" and toetsen[0] in [
+                #         "left",
+                #         "right",
+                #         "up",
+                #         "down",
+                #     ]:
                 if ball_change:  # If there was a target change
-                    if task_choice[0] == "B" and toetsen[0] in [
-                        "left",
-                        "right",
-                        "up",
-                        "down",
-                    ]:
+                    if task_choice[0] == "B" and toetsen[0] in ["x", "m",]:
                         hue_or_speed = "hue" if ball_change_type == "H" else "speed"
-                        exp_data["response"][-1] = toetsen[0]
+                        
+                        if toetsen[0] == button_order["lighter"]: # not sure if this works
+                            this_response = "lighter"
+                                            
+                        elif toetsen[0] == button_order["darker"]:
+                            this_response = "darker"
+                        # Reminder: white is [1, 1, 1] and black is [-1, -1, -1]
+                        if (this_response == "lighter" and ball_color_change > 0) or (this_response == "darker" and ball_color_change < 0):
+                            print(f"Correct! detected a {this_response} ball in {round(toets_moment - ball_change_moment, 3)}s")
+                            correct_response = True
+                        elif ball_color_change == 0:
+                            correct_response = None
+                        
+                        exp_data["response"][-1] = this_response
+                        # exp_data["response"][-1] = toetsen[0]
+                                                
                         exp_data["rt"][-1] = toets_moment - ball_change_moment
                         if toets_moment < ball_change_moment:
                             feedback_text = (
@@ -806,25 +754,24 @@ for trial_number, trial in enumerate(trials):
                             )
                             print(f"Wrong, TOO EARLY")
                             correct_response = False
-                        elif ball_direction == toetsen[0]:
-                            feedback_text = (
-                                f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
-                                if give_feedback
-                                else ""
-                            )
-                            print(
-                                f"Correct! detected {rand_speed_change} {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
-                            )
-                            correct_response = True
-                        else:
-                            feedback_text = (
-                                f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
-                                if give_feedback
-                                else ""
-                            )
-                            print(
-                                f"Wrong direction, should be a {rand_speed_change} {ball_direction}ward ball"
-                            )
+                        # # elif ball_direction == toetsen[0]: # NOT SURE IF THIS CAN BE COMMENTED OUT FULLY
+                        # #     feedback_text = (
+                        # #         f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                        # #         if give_feedback
+                        # #         else ""
+                        # #     )
+                        # #     print(
+                        # #         f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s"
+                        # #     )
+                        # #     correct_response = True
+                        # # elif ball_color_change == toetsen[0]:
+                        # elif correct_response:
+                        #     print(f"Correct! detected hue change of {toetsen[0]}ward ball in {round(toets_moment - ball_change_moment, 3)}s")
+                        #     correct_response = True
+                        
+                        
+                        elif (this_response == "lighter" and ball_color_change < 0) or (this_response == "darker" and ball_color_change > 0):
+                            print(f"Wrong answer, the ball didn't become {this_response}")
                             correct_response = False
                 else:  # If there was nothing to detect
                     print(f"Wrong, there was no change")
@@ -835,7 +782,7 @@ for trial_number, trial in enumerate(trials):
             # if not responded:
             if ball_change:
                 feedback_text = (
-                    f"Undetected ball change, it was a {rand_speed_change} {ball_direction}ward ball"
+                    f"Undetected ball change, there was a hue change of the {ball_direction}ward ball"
                     if give_feedback
                     else ""
                 )
@@ -849,6 +796,15 @@ for trial_number, trial in enumerate(trials):
         exp_data["accuracy"][
             -1
         ] = correct_response  # Werkt (misschien nu niet meer, stond eerst hoger)
+        
+        
+        # if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
+        #     intermit_data = pd.DataFrame(exp_data)
+
+        #     # Save intermittent data
+        #     subject_id = expInfo["participant"]
+        #     task_name = expInfo["task"].lower().replace(" ", "_")
+            
 
     # Get the predictions and sensory input for ball path per physical reasoning appraoch (hypothesis)
     for hypothesis in ["abs", "sim"]:
@@ -867,21 +823,13 @@ for trial_number, trial in enumerate(trials):
                     -1
                 ] = True  # Meaning that prediction and input agree (SEEMS TO WORK!!)
         
-    # Example usage in your existing code
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
-        this_precision = get_precision(
-            intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        )
-        this_sensitivity = get_sensitivity(
-            intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        )
-        this_f1 = get_f1_score(
-            intermit_data, hypothesis="both", include_dubtrials=False, return_df=False
-        )
-        # feedback_text = f"Precision: {this_precision}\nSensitivity: {this_sensitivity}\nF1 Score: {this_f1}"
-        feedback_text = f'Current accuracy: {(np.mean((this_precision["simulation"], this_precision["abstraction"]))*100):.2f}% changes detected!'
-        # feedback_text = "Theoretical feedback, implement still"
+        intermit_rt = np.mean(intermit_data["rt"].dropna())
+        feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
+        subject = expInfo["participant"]
+        os.makedirs(f"{datadir}/{subject}", exist_ok=True)
+        intermit_data.to_csv(f"{datadir}/{subject}/intermit_data.csv")
         
         # Show the break with countdown
         show_break(win, duration=10)
@@ -889,7 +837,7 @@ for trial_number, trial in enumerate(trials):
         feedback_text = ""
 
     feedback = visual.TextStim(
-        win, text=feedback_text, color="white", pos=(0, 50), height=30
+        win, text=feedback_text, color="white", pos=(0, 100), height=30
     )
     left_border.draw()
     right_border.draw()
@@ -901,10 +849,21 @@ for trial_number, trial in enumerate(trials):
     win.flip()
     core.wait(config["feedback_time"])
 
-    # Reset ball and fixation color to original after each trial
-    ball.fillColor = config["ball_fillcolor"]
-    ball.lineColor = config["ball_linecolor"]
-    fixation.color = config["fixation_color"]
+    # Reset ball and fixation color to original after each trial # Don't need this I think
+    # ball.fillColor = config["ball_fillcolor"]
+    # ball.lineColor = config["ball_linecolor"]
+    # fixation.color = config["fixation_color"]
+    
+    
+    # df = pd.DataFrame(exp_data)
+
+
+    # if trial_no // 10 == 0:
+    #     # Save the DataFrame to a CSV file
+    #     subject_id = expInfo["participant"]
+    #     task_name = expInfo["task"].lower().replace(" ", "_")
+    #     save_performance_data(expInfo["participant"], task_name, intermit_data, intermediate=True)
+    #     save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, intermediate=True)
 
 win.close()
 
@@ -913,4 +872,12 @@ df = pd.DataFrame(exp_data)
 # Save the DataFrame to a CSV file
 subject_id = expInfo["participant"]
 task_name = expInfo["task"].lower().replace(" ", "_")
-save_performance_data(expInfo["participant"], task_name, df)
+save_performance_data(expInfo["participant"], task_name, df, base_dir=datadir)
+save_performance_data(expInfo["participant"], task_name, design_matrix, design_matrix=True, base_dir=datadir)
+
+end_time = time.time()
+elapsed_time = end_time - start_time
+# Turn into very simple dataframe including the number of trials and time it took
+timing_df = pd.DataFrame({"n_trials": [n_trials], "time_elapsed": [elapsed_time]})
+timing_df.to_csv(f"{datadir}/{subject}/timing.csv")
+

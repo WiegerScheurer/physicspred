@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from itertools import product
 import pandas as pd
-
+import colour
 import pandas as pd
 import numpy as np
 import random
@@ -44,6 +44,15 @@ def ordinal_sample(mean, step_size, n_elements, plot:bool=False, round_decimals:
         steps = np.round(steps, round_decimals)
     
     return steps
+
+# Compound function to be used in psychopy (make sure this is also usable in other projects, as quite important)
+def oklab_to_rgb(oklab, psychopy_rgb:bool=False):
+    # Convert OKLab to XYZ
+    xyz = colour.Oklab_to_XYZ(oklab)
+    # Convert XYZ to RGB
+    rgb = [np.clip(((rgb_idx * 2) - 1), -1, 1) for rgb_idx in colour.XYZ_to_sRGB(xyz)] if psychopy_rgb else colour.XYZ_to_sRGB(xyz)
+
+    return rgb
 
 # def create_balanced_trial_design(trial_n=None, avg_ball_speed=6.25, natural_speed_variance=0.25):
     
