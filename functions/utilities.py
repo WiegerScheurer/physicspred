@@ -26,7 +26,8 @@ def bellshape_sample(mean, sd, n_samples, plot:bool=False, shuffle:bool=True):
     return list(sample_pool)
 
 # Use for the different target hues, balance over it.
-def ordinal_sample(mean, step_size, n_elements, plot:bool=False, round_decimals:int | None=None):
+def ordinal_sample(mean, step_size, n_elements, plot:bool=False, round_decimals:int | None=None, 
+                   pos_bias_factor:float=1.0, neg_bias_factor:float=1.0):
     # Calculate the start and end points
     half_range = (n_elements - 1) // 2
     start = mean - half_range * step_size
@@ -42,6 +43,12 @@ def ordinal_sample(mean, step_size, n_elements, plot:bool=False, round_decimals:
     # Round the steps to 2 decimal places
     if round_decimals is not None:
         steps = np.round(steps, round_decimals)
+        
+    # Apply positive and negative bias factors
+    if pos_bias_factor != 1.0:
+        steps = [step * pos_bias_factor if step > mean else step for step in steps]
+    if neg_bias_factor != 1.0:
+        steps = [step * neg_bias_factor if step < mean else step for step in steps]
     
     return steps
 
@@ -53,6 +60,50 @@ def oklab_to_rgb(oklab, psychopy_rgb:bool=False):
     rgb = [np.clip(((rgb_idx * 2) - 1), -1, 1) for rgb_idx in colour.XYZ_to_sRGB(xyz)] if psychopy_rgb else colour.XYZ_to_sRGB(xyz)
 
     return rgb
+
+def michelson_contrast(l_max:float, l_min:float):
+    """Function to compute the Michelson contrast between two luminances.
+
+    Args:
+        lum1 (float): Luminance of object 1
+        lum2 (float): Luminance of object 2
+
+    Returns:
+        float: Michelson contrast between the two objects
+    """
+    return (l_max - l_min) / (l_max + l_min)
+
+def equal_contrasts(darker_object:float, startlum_light_obj:float, light_increase:float, delta_lum:bool=False):
+    """Function to compute how much darker a light object on a dark background needs to become to
+    match the difference in contrast with background of the original object becoming lighter. 
+
+    Assuming that the ball cannot become darker than the background, the function computes the luminance of the
+    If it does, return an error (but implement still)
+    Args:
+        darker_object (float): The luminance of the darker object, such as the background
+        startlum_light_obj (float): The start luminance of the lighter object
+        light_increase (float): The increase in luminance of the lighter object
+
+    Returns:
+        float: The luminance of the darker object that would match the contrast difference of the lighter object
+    """
+
+    start_contrast = michelson_contrast(startlum_light_obj, darker_object)
+    
+    lighter_obj = startlum_light_obj + light_increase # Think about whether this is sensible (not adaptive valence?)
+    
+    lighter_contrast = michelson_contrast(lighter_obj, darker_object)
+    
+    lighter_contrast_diff = lighter_contrast - start_contrast
+    
+    darker_contrast = start_contrast - lighter_contrast_diff
+    
+    darker_ball_lum = darker_object * ((1 + darker_contrast) / (1 - darker_contrast))
+    
+    if darker_ball_lum < darker_object:
+        print("Error: Darker object is darker than background")
+    else:
+        return (darker_ball_lum - startlum_light_obj) if delta_lum else darker_ball_lum
 
 # def create_balanced_trial_design(trial_n=None, avg_ball_speed=6.25, natural_speed_variance=0.25):
     
@@ -558,7 +609,7 @@ def oklab_to_rgb(oklab, psychopy_rgb:bool=False):
 from itertools import product
 
 
-def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False], ball_color_change_mean=.45, ball_color_change_sd=0.05):
+def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False], ball_color_change_mean=0, ball_color_change_sd=0.05, startball_lum=.75, background_lum=.25):
     
     def _clean_trial_options(df):
         # For each row, if trial_option starts with "none", keep only the first 6 characters
@@ -592,8 +643,25 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
     ball_change_options = change_ratio
     
     
-    ball_color_change_options = list(ordinal_sample(ball_color_change_mean, ball_color_change_sd, n_elements=5, round_decimals=3))
+    # So this is the implementation I had before, but now the lines below with the equal_contrast actually
+    # take into account that different ball changes involve different changes of michelson contrast, given
+    # the background luminance.
     
+    # Strangely enough it appears that darker balls should be less extreme than lighter balls. 
+    
+    # ball_color_change_options = list(ordinal_sample(ball_color_change_mean, ball_color_change_sd, n_elements=5, round_decimals=3,
+    #                                  pos_bias_factor=1.0, neg_bias_factor=2.0))
+    
+    darker_lum = equal_contrasts(darker_object = background_lum,
+                                 startlum_light_obj=startball_lum,
+                                 light_increase=ball_color_change_sd,
+                                 delta_lum=True)
+    darkest_lum = equal_contrasts(darker_object = background_lum,
+                                 startlum_light_obj=startball_lum,
+                                 light_increase= (2 * ball_color_change_sd),
+                                 delta_lum=True)
+    
+    ball_color_change_options = [(2 * ball_color_change_sd), ball_color_change_sd, 0.0, darker_lum, darkest_lum]
     
     
     # If trial_n is specified, create a balanced subset

@@ -2,6 +2,7 @@ import os
 import sys
 import yaml
 import random
+import colour
 import numpy as np
 from psychopy import visual, gui, core, data, filters
 
@@ -11,6 +12,7 @@ sys.path.append(
 )  # To enable importing from repository folders
 
 from functions.physics import get_bounce_dist
+from functions.utilities import oklab_to_rgb
 
 # Load configuration from YAML file
 config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config_lumin.yaml")
@@ -29,6 +31,7 @@ verbose = config["verbose"]
 exp_parameters = config["exp_parameters"]
 square_size = config["square_size"]
 occluder_opacity = config["occluder_opacity"]
+background_luminance = config["background_luminance"]
 
 exp_data = {par: [] for par in exp_parameters}
 
@@ -40,7 +43,7 @@ win = visual.Window(
     allowStencil=False,  # Whether to allow stencil buffer (used for advanced graphics).
     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
     # color=[-.75, -.75, -.75],  # [0, 0, 0],          # The background color of the window (in RGB space).
-    color=[0, 0, 0],          # The background color of the window (in RGB space).
+    color=[0, 0, 0],          # The background color of the window (in RGB space). # doesn't matter anymore
     colorSpace="rgb",  # The color space for the background color (e.g., 'rgb', 'dkl', 'lms').
     backgroundImage="",  # Path to an image file to use as the background.
     backgroundFit="none",  # How to fit the background image ('none', 'fit', 'stretch').
@@ -52,6 +55,61 @@ win = visual.Window(
 win_dims = win.size
 
 fixation = visual.TextStim(win, text="+", color=config["fixation_color"], pos=(0, 0), height=50)
+
+# Create checkerboard pattern
+def create_checkerboard(size, check_size, light_color, dark_color):
+    pattern = np.zeros((size, size, 3))
+    num_checks = size // check_size
+    for i in range(num_checks):
+        for j in range(num_checks):
+            color = light_color if (i + j) % 2 == 0 else dark_color
+            pattern[i*check_size:(i+1)*check_size, j*check_size:(j+1)*check_size] = color
+    return pattern
+
+# Set luminance values in Oklab space
+mean_ball_color = .25 # config["ball_start_color_mean"]
+checker_light = oklab_to_rgb([mean_ball_color + 0, 0, 0])
+checker_dark = oklab_to_rgb([mean_ball_color - 0, 0, 0])
+
+# Make the lab color beige
+
+# Create checkerboard texture
+check_size = 20  # Size of each check in pixels
+texture = create_checkerboard(square_size, check_size, checker_light, checker_dark)
+
+# Create grating stimulus using ImageStim
+grating = visual.ImageStim(
+    win=win,
+    image=texture,
+    size=[square_size, square_size],
+    units='pix'
+)
+
+# # Create checkerboard texture TO CONTROL FOR CONTRAST WITH BACKGROUND
+# size = square_size  # Size of the texture in pixels
+# check_size = 8  # Size of each check in pixels
+# texture = np.ones((size, size, 3))
+# checks = np.zeros((size, size))
+# checks[::check_size, ::check_size] = 1
+# checks[check_size::check_size, check_size::check_size] = 1
+
+# # Set luminance values in Oklab space
+# mean_ball_color = config["ball_start_color_mean"]
+# checker_light = mean_ball_color + 0.2
+# checker_dark = mean_ball_color - 0.2
+
+# # Convert Oklab to RGB (simplified, you may need a proper conversion function)
+# texture[checks == 1] = list(oklab_to_rgb([checker_light, 0, 0], True))  # Lighter checks
+# texture[checks == 0] = list(oklab_to_rgb([checker_dark, 0, 0], True))   # Darker checks
+
+# # Create grating stimulus
+# grating = visual.GratingStim(
+#     win=win,
+#     tex=texture,
+#     size=[square_size, square_size],
+#     units='pix',
+#     sf=1.0/check_size
+# )
 
 ####################################### MAKING A BETTER BALL #############################
 ball = visual.Circle(win, 

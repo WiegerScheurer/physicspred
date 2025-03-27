@@ -173,6 +173,7 @@ from objects.task_components import (
     horizontal_lines,
     vertical_lines,    
     occluder_square,
+    grating,
 )
 
 line_map = {
@@ -353,10 +354,12 @@ for trial_number, trial in enumerate(trials):
     ball.color = oklab_to_rgb([ball_start_color, 0, 0], psychopy_rgb=True)
     
     ########### DRAW FIXATION CROSS ###########
+    grating.draw()
     left_border.draw()
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
+    # grating.draw()
     refreshInformation.setAutoDraw(True)
     fixation.draw()
     
@@ -369,6 +372,7 @@ for trial_number, trial in enumerate(trials):
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
+    grating.draw()
     if trial[:-2] == "45_top":
         line_135_top.draw()
     elif trial[:-2] == "45_bottom":
@@ -390,7 +394,8 @@ for trial_number, trial in enumerate(trials):
     left_border.draw()
     right_border.draw()
     top_border.draw()
-    bottom_border.draw()    
+    bottom_border.draw()  
+    grating.draw()  
     if trial[:-2] == "45_top":
         line_135_top.draw()
     elif trial[:-2] == "45_bottom":
@@ -558,6 +563,7 @@ for trial_number, trial in enumerate(trials):
             crossed_fixation = True
 
         # Draw on each frame
+        grating.draw()
         ball.draw()
         left_border.draw()
         right_border.draw()
@@ -837,6 +843,7 @@ for trial_number, trial in enumerate(trials):
             feedback = visual.TextStim(
                 win, text=feedback_text, color="white", pos=(0, 150), height=30
             )
+            # grating.draw()
             left_border.draw()
             right_border.draw()
             top_border.draw()
@@ -856,6 +863,7 @@ for trial_number, trial in enumerate(trials):
             feedback = visual.TextStim(
                 win, text=feedback_text, color="white", pos=(0, 150), height=30
             )
+        
             left_border.draw()
             right_border.draw()
             top_border.draw()
