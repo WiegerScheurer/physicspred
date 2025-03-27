@@ -13,20 +13,21 @@ square_size: 1080 # to work on my laptop for meeting
 interactor_height: 150
 interactor_width: 15
 occluder_radius: 240 #190 # had it at cross size 180 # Used to be 130 
-occluder_opacity: 0 #.5 # 1 is opaque, 0 is transparent
+occluder_opacity: 1 #.5 # 1 is opaque, 0 is transparent
 occluder_color: [-1, -1, -1] #[-.55, -.55, -.55]
 occluder_type: "square" # or "cross" or "cross_smooth"
 feedback_freq: 10  # After how many trials there will be a feedback moment
-n_trials: 400
+n_trials: 100
 verbose: false
-background_luminance: .25 # this is same as ball start colour mean
+background_luminance: -.75 # this is same as ball start colour mean # DOESN'T WORK YET ADD TO OBJECTS FILE WIN
+neg_bias_factor: 1.4
 
 # These are all changed to Oklab color space (going from 0 to 1, rather than -1 to 1)
 ball_color_change_mean: 0 # used to be 0, and should still be, stupid
-ball_color_change_sd: .08 # Used to be .1675
+ball_color_change_sd: .06 # Used to be .1675
 
-ball_start_color_mean: .75 #.575 # Used to be .15
-ball_start_color_sd: 0 #.08 # Used to be .175
+ball_start_color_mean: .8 #.575 # Used to be .15
+ball_start_color_sd: .05 #.08 # Used to be .175
 
 # Ball change colour
 ball_changecolor: [.45, .45, .7]
@@ -48,7 +49,7 @@ fast_bounce_skip_factor: 2.0
 
 # Screen parameters:
 experiment_screen: 1 # 0 is the main screen, 1 is the second screen
-full_screen: true
+full_screen: false
 draw_grid: false
 
 # fMRI parameters (current values based on Ekman paper)

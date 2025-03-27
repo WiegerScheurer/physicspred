@@ -71,14 +71,16 @@ from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_
 #############################
 from psychopy import core, event, visual
 
-def show_break(win, duration=10):
+def show_break(win, duration=10, button_order={"lighter": "m", "darker": "x"}):
+    longer_str = " longer" if duration > 10 else ""
+
     clock = core.Clock()
     countdown_text = visual.TextStim(win, text='', pos=(0, 0), height=20)
-    break_text = visual.TextStim(win, text='You deserve a break now. Press space if you disagree.', pos=(0, 50), height=30)
+    break_text = visual.TextStim(win, text=f'You deserve a{longer_str} break now.\n\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker\n\nPress space to continue.', pos=(0, 70), height=30)
     
     while clock.getTime() < duration:
         remaining_time = duration - int(clock.getTime())
-        countdown_text.text = f'Break ends in {remaining_time} seconds'
+        countdown_text.text = f'\n\n\n\n\n\nBreak ends in {remaining_time} seconds'
         countdown_text.draw()
         break_text.draw()
         win.flip()
@@ -230,7 +232,7 @@ design_matrix = build_design_matrix(n_trials=n_trials, # Multiple of 160 for now
                                     change_ratio=[True],
                                     ball_color_change_mean=config["ball_color_change_mean"], 
                                     ball_color_change_sd=config["ball_color_change_sd"],
-                                    verbose=True)
+                                    verbose=True, neg_bias_factor=config["neg_bias_factor"])
 
 check_balance(design_matrix) if verbose else None
 
@@ -348,18 +350,18 @@ for trial_number, trial in enumerate(trials):
     # changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
     changed_ball_color = oklab_to_rgb([(ball_start_color + ball_color_change), 0, 0], psychopy_rgb=True) # Here turned into list of RGB values
     
-    start_color = ball_start_color # was config["ball_fillcolor"]
+    # start_color = ball_start_color # was config["ball_fillcolor"]
+    start_color = np.clip(ball_start_color, -1, 1)
     # ball.color = ball_start_color # Not sure if this works
     
-    ball.color = oklab_to_rgb([ball_start_color, 0, 0], psychopy_rgb=True)
+    ball.color = np.clip(oklab_to_rgb([ball_start_color, 0, 0], psychopy_rgb=True), -1, 1)
     
     ########### DRAW FIXATION CROSS ###########
-    grating.draw()
+    # grating.draw()
     left_border.draw()
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
-    # grating.draw()
     refreshInformation.setAutoDraw(True)
     fixation.draw()
     
@@ -372,7 +374,7 @@ for trial_number, trial in enumerate(trials):
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
-    grating.draw()
+    # grating.draw()
     if trial[:-2] == "45_top":
         line_135_top.draw()
     elif trial[:-2] == "45_bottom":
@@ -395,7 +397,7 @@ for trial_number, trial in enumerate(trials):
     right_border.draw()
     top_border.draw()
     bottom_border.draw()  
-    grating.draw()  
+    # grating.draw()  
     if trial[:-2] == "45_top":
         line_135_top.draw()
     elif trial[:-2] == "45_bottom":
@@ -563,7 +565,7 @@ for trial_number, trial in enumerate(trials):
             crossed_fixation = True
 
         # Draw on each frame
-        grating.draw()
+        # grating.draw()
         ball.draw()
         left_border.draw()
         right_border.draw()
@@ -835,10 +837,10 @@ for trial_number, trial in enumerate(trials):
         intermit_data.to_csv(f"{datadir}/{subject}/intermit_data.csv")
 
         if (trial_number + 1) % (n_trials // 2) == 0 and (trial_number + 1 != n_trials):
-            feedback_text = f'You are halfway through! An incredible job.\nHere is a 30s break\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker'
+            # feedback_text = f'You are halfway through! An incredible job.\nHere is a 30s break\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker'
 
             # Show the break with countdown
-            show_break(win, duration=10)
+            show_break(win, duration=30, button_order=button_order)
 
             feedback = visual.TextStim(
                 win, text=feedback_text, color="white", pos=(0, 150), height=30
@@ -853,12 +855,14 @@ for trial_number, trial in enumerate(trials):
             
             win.flip()
             # core.wait(config["feedback_time"])
-            core.wait(30)
+            core.wait(config["feedback_time"])
+
+            # core.wait(30)
             
         else:
 
             # Show the break with countdown
-            show_break(win, duration=10)
+            show_break(win, duration=10, button_order=button_order)
 
             feedback = visual.TextStim(
                 win, text=feedback_text, color="white", pos=(0, 150), height=30

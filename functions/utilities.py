@@ -609,7 +609,9 @@ def equal_contrasts(darker_object:float, startlum_light_obj:float, light_increas
 from itertools import product
 
 
-def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False], ball_color_change_mean=0, ball_color_change_sd=0.05, startball_lum=.75, background_lum=.25):
+def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False], 
+                                 ball_color_change_mean=0, ball_color_change_sd=0.05, startball_lum=.75, background_lum=.25,
+                                 neg_bias_factor:float=1.5):
     
     def _clean_trial_options(df):
         # For each row, if trial_option starts with "none", keep only the first 6 characters
@@ -642,26 +644,24 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
     # ball_change_options = [True, False]
     ball_change_options = change_ratio
     
-    
-    # So this is the implementation I had before, but now the lines below with the equal_contrast actually
-    # take into account that different ball changes involve different changes of michelson contrast, given
-    # the background luminance.
-    
     # Strangely enough it appears that darker balls should be less extreme than lighter balls. 
     
-    # ball_color_change_options = list(ordinal_sample(ball_color_change_mean, ball_color_change_sd, n_elements=5, round_decimals=3,
-    #                                  pos_bias_factor=1.0, neg_bias_factor=2.0))
+    ball_color_change_options = list(ordinal_sample(ball_color_change_mean, ball_color_change_sd, n_elements=5, round_decimals=3,
+                                     pos_bias_factor=1.0, neg_bias_factor=neg_bias_factor))
+
+    # HERE I TRIED TO ACCOUNT FOR RELATIVE DIFFERENCES IN MICHELSON CONTRAST BUT THAT 
+    # DOESN'T MAKE SENSE AS DARKER BALLS ARE MADE LESS DARK SO EVEN MORE DIFFICULT TO DETECT
     
-    darker_lum = equal_contrasts(darker_object = background_lum,
-                                 startlum_light_obj=startball_lum,
-                                 light_increase=ball_color_change_sd,
-                                 delta_lum=True)
-    darkest_lum = equal_contrasts(darker_object = background_lum,
-                                 startlum_light_obj=startball_lum,
-                                 light_increase= (2 * ball_color_change_sd),
-                                 delta_lum=True)
+    # darker_lum = equal_contrasts(darker_object = background_lum,
+    #                              startlum_light_obj=startball_lum,
+    #                              light_increase=ball_color_change_sd,
+    #                              delta_lum=True)
+    # darkest_lum = equal_contrasts(darker_object = background_lum,
+    #                              startlum_light_obj=startball_lum,
+    #                              light_increase= (2 * ball_color_change_sd),
+    #                              delta_lum=True)
     
-    ball_color_change_options = [(2 * ball_color_change_sd), ball_color_change_sd, 0.0, darker_lum, darkest_lum]
+    # ball_color_change_options = [(2 * ball_color_change_sd), ball_color_change_sd, 0.0, darker_lum, darkest_lum]
     
     
     # If trial_n is specified, create a balanced subset
@@ -894,7 +894,10 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
             
         # return output_df.sample(frac=1).reset_index(drop=True)
         
-def build_design_matrix(n_trials:int, change_ratio:list=[True, False], ball_color_change_mean:float=.45, ball_color_change_sd:float=.05, trials_per_fullmx:int | None=None, verbose:bool=False):
+def build_design_matrix(n_trials:int, change_ratio:list=[True, False], 
+                        ball_color_change_mean:float=.45, ball_color_change_sd:float=.05, 
+                        trials_per_fullmx:int | None=None, verbose:bool=False,
+                        neg_bias_factor:float=1.5):
     """
     Build a design matrix for a given number of trials.
 
@@ -910,7 +913,8 @@ def build_design_matrix(n_trials:int, change_ratio:list=[True, False], ball_colo
         test_dm = create_balanced_trial_design(trial_n=None, 
                                                change_ratio=change_ratio, 
                                                ball_color_change_mean=ball_color_change_mean, 
-                                               ball_color_change_sd=ball_color_change_sd)
+                                               ball_color_change_sd=ball_color_change_sd,
+                                               neg_bias_factor=neg_bias_factor)
         trials_per_fullmx = len(test_dm)    
         print(f"Number of trials per full matrix: {trials_per_fullmx}")
 
@@ -921,13 +925,19 @@ def build_design_matrix(n_trials:int, change_ratio:list=[True, False], ball_colo
         print(f"Design matrix for {n_trials} trials, constituting {full_matrices} fully balanced matrices and {remainder} trials balanced approximately optimal.")
     
     if remainder > 0:
-        initial_dm = create_balanced_trial_design(remainder, change_ratio=change_ratio, ball_color_change_mean=ball_color_change_mean, ball_color_change_sd=ball_color_change_sd)
+        initial_dm = create_balanced_trial_design(remainder, change_ratio=change_ratio, 
+                                                  ball_color_change_mean=ball_color_change_mean, 
+                                                  ball_color_change_sd=ball_color_change_sd,
+                                                  neg_bias_factor=neg_bias_factor)
     else:
         initial_dm = pd.DataFrame()
     
     for full_matrix in range(full_matrices + 1):
-        dm = create_balanced_trial_design(192)
-        dm = create_balanced_trial_design(trials_per_fullmx, change_ratio=change_ratio, ball_color_change_mean=ball_color_change_mean, ball_color_change_sd=ball_color_change_sd)
+        dm = create_balanced_trial_design(192, neg_bias_factor=neg_bias_factor)
+        dm = create_balanced_trial_design(trials_per_fullmx, change_ratio=change_ratio, 
+                                          ball_color_change_mean=ball_color_change_mean, 
+                                          ball_color_change_sd=ball_color_change_sd,
+                                          neg_bias_factor=neg_bias_factor)
         if full_matrix == 0:
             design_matrix = initial_dm
         else:

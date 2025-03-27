@@ -42,8 +42,9 @@ win = visual.Window(
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').
     allowStencil=False,  # Whether to allow stencil buffer (used for advanced graphics).
     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
-    # color=[-.75, -.75, -.75],  # [0, 0, 0],          # The background color of the window (in RGB space).
-    color=[0, 0, 0],          # The background color of the window (in RGB space). # doesn't matter anymore
+    # color= [background_luminance] * 3,  # [0, 0, 0],          # The background color of the window (in RGB space).
+    # color=[0, 0, 0],          # The background color of the window (in RGB space). # doesn't matter anymore
+    color=[-.75, -.75, -.75],          # The background color of the window (in RGB space). # doesn't matter anymore
     colorSpace="rgb",  # The color space for the background color (e.g., 'rgb', 'dkl', 'lms').
     backgroundImage="",  # Path to an image file to use as the background.
     backgroundFit="none",  # How to fit the background image ('none', 'fit', 'stretch').
@@ -67,14 +68,14 @@ def create_checkerboard(size, check_size, light_color, dark_color):
     return pattern
 
 # Set luminance values in Oklab space
-mean_ball_color = .25 # config["ball_start_color_mean"]
-checker_light = oklab_to_rgb([mean_ball_color + 0, 0, 0])
-checker_dark = oklab_to_rgb([mean_ball_color - 0, 0, 0])
+mean_ball_color = config["ball_start_color_mean"]
+checker_light = oklab_to_rgb([mean_ball_color + 0.05, 0, 0])
+checker_dark = oklab_to_rgb([mean_ball_color - 0.05, 0, 0])
 
 # Make the lab color beige
 
 # Create checkerboard texture
-check_size = 20  # Size of each check in pixels
+check_size = 4  # Size of each check in pixels
 texture = create_checkerboard(square_size, check_size, checker_light, checker_dark)
 
 # Create grating stimulus using ImageStim
