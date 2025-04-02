@@ -51,6 +51,7 @@ win = visual.Window(
     blendMode="avg",  # The blend mode for drawing (e.g., 'avg', 'add').
     useFBO=True,  # Whether to use Frame Buffer Objects (for advanced graphics).
     units="pix",  # The default units for window operations (e.g., 'pix', 'norm', 'cm', 'deg', 'height').
+    multiSample=False,  # Whether to use multi-sample anti-aliasing. # QUADRUPLE CHECK IF THIS DOESN'T MESS UP MOVEMENT OF BALL, APPEARED TO BE SLUGGISH
 )
 
 win_dims = win.size
@@ -115,6 +116,7 @@ grating = visual.ImageStim(
 ####################################### MAKING A BETTER BALL #############################
 ball = visual.Circle(win, 
                      radius=ball_radius, 
+                     edges=64,
                      fillColor="white",#config["ball_fillcolor"], 
                      lineColor="white", #config["ball_linecolor"], 
                      interpolate=True,
@@ -155,13 +157,6 @@ ball_glimmer = visual.GratingStim(
     contrast=1,
     color='white',
 )
-
-# ball_shade = visual.ImageStim(
-#    win,
-#    image="/Users/wiegerscheurer/Stimulus_material/ball_shaded_opaqtop.png",  
-#    size=(ball_radius*2.05, ball_radius*2.05),
-#    opacity=.4
-#)
 
 
 # Calculate the offset
@@ -224,7 +219,8 @@ line_45_bottom = visual.ImageStim(
     image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png",
     size=(interactor_height, interactor_height),
     pos=(bounce_dist, -(bounce_dist)),
-    opacity=1
+    opacity=1,
+    interpolate=True,
 )
 
 line_45_top = visual.ImageStim(
@@ -233,7 +229,8 @@ line_45_top = visual.ImageStim(
     image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png",
     size=(interactor_height, interactor_height),
     pos= (-(bounce_dist), bounce_dist),
-    opacity=1
+    opacity=1,
+    interpolate=True,
 )
 
 line_135_bottom = visual.ImageStim(
@@ -242,7 +239,8 @@ line_135_bottom = visual.ImageStim(
     image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png",
     size=(interactor_height, interactor_height),
     pos=(-bounce_dist, -(bounce_dist)),
-    opacity=1
+    opacity=1,
+    interpolate=True,
 )
 
 line_135_top = visual.ImageStim(
@@ -251,7 +249,8 @@ line_135_top = visual.ImageStim(
     image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png",
     size=(interactor_height, interactor_height),
     pos= ((bounce_dist), bounce_dist),
-    opacity=1
+    opacity=1,
+    interpolate=True,
 )
 
 
@@ -300,8 +299,8 @@ occluder = visual.Rect(
     # height=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
     # fillColor=np.array(config["occluder_color"], dtype=float),
     # lineColor=np.array(config["occluder_color"], dtype=float),
-    fillColor=[-0.1, -0.51, -0.87],
-    lineColor=[-0.1, -0.51, -0.87],
+    fillColor=[-0.05, -0.51, -0.87],
+    lineColor=[-0.05, -0.51, -0.87],
     pos=(0, 0),
     opacity=occluder_opacity if occluder_type != "cross" else 0,
     ori=45 if occluder_type == "cross_smooth" else 0
@@ -318,27 +317,6 @@ inner_outline = visual.ShapeStim(
     pos=(0, 0),
     opacity=occluder_opacity,
 )
-
-# Draw the cross shape
-# occluder.draw()
-
-# occluder = visual.Circle(
-#     win, radius=occluder_radius, fillColor="grey", lineColor="grey", pos=(0, 0)
-# )
-
-
-
-# # Add opacity = .5 to make see-through
-# occluder_square = visual.Rect(
-#     win,
-#     width=occluder_radius * 1.5,
-#     height=occluder_radius * 1.5,
-#     fillColor="grey",
-#     lineColor="grey",
-#     pos=(0, 0),
-#     opacity=occluder_opacity,
-#     ori=0
-# )
 
 occluder_glass = visual.Rect(
     win,
@@ -406,3 +384,60 @@ vertical_lines = []
 for i in range(-num_lines, num_lines + 1):
     x = i * (line_length / (2 * num_lines))
     vertical_lines.append(visual.Line(win, start=(x, -line_length / 2), end=(x, line_length / 2), lineWidth=line_width))
+
+# Define the length and thickness of the cross arms
+cross_length = config["fixation_length"]
+cross_thickness = config["fixation_thickness"]
+
+# Create the horizontal line of the cross
+horizontal_line = visual.ShapeStim(
+    win,
+    vertices=[(-cross_length / 2, 0), (cross_length / 2, 0)],
+    lineWidth=cross_thickness,
+    closeShape=False,
+    lineColor=config["fixation_color"]
+)
+
+# Create the vertical line of the cross
+vertical_line = visual.ShapeStim(
+    win,
+    vertices=[(0, -cross_length / 2), (0, cross_length / 2)],
+    lineWidth=cross_thickness,
+    closeShape=False,
+    lineColor=config["fixation_color"]
+)
+
+# Draw the fixation cross by drawing both lines
+def draw_fixation():
+    horizontal_line.draw()
+    vertical_line.draw()
+
+# Helper function to draw screen borders and other elements
+def draw_screen_elements(trial, draw_occluder=False, draw_grid=False):
+    left_border.draw()
+    right_border.draw()
+    top_border.draw()
+    bottom_border.draw()
+    
+    # Draw interactor line if applicable
+    if trial:
+        if trial[:-2] == "45_top":
+            line_135_top.draw()
+        elif trial[:-2] == "45_bottom":
+            line_135_bottom.draw()
+        elif trial[:-2] == "135_top":
+            line_45_top.draw()
+        elif trial[:-2] == "135_bottom":
+            line_45_bottom.draw()
+    
+    # Draw grid if enabled
+    if draw_grid and config["draw_grid"]:
+        for line in horizontal_lines + vertical_lines:
+            line.draw()
+            
+    # Draw occluder if needed
+    if draw_occluder:
+        occluder.draw()
+        
+    # fixation.draw()
+    draw_fixation()

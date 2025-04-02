@@ -84,7 +84,7 @@ expInfo['date'] = data.getDateStr()  # add a simple timestamp
 expInfo['expName'] = expName
 expInfo['psychopyVersion'] = psychopyVersion
 
-from objects.task_components_mac import win, ball, left_border, right_border, top_border, bottom_border, line_45, line_135, occluder, fixation
+from objects.deprecated.task_components_mac import win, ball, left_border, right_border, top_border, bottom_border, line_45, line_135, occluder, fixation
 
 win_dims = win.size
 

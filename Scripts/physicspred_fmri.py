@@ -21,9 +21,13 @@ from datetime import datetime
 import os
 import sys
 import time
-
 from psychopy import gui
+
 start_time = time.time()
+
+# sys.path.append(
+#     "D:/Users/wiesch/physicspred-main"
+# )  # To enable importing from repository folders
 
 sys.path.append(
     "/Users/wiegerscheurer/repos/physicspred"
@@ -45,6 +49,7 @@ from functions.utilities import (
     build_design_matrix,
     bellshape_sample,
     ordinal_sample,
+    oklab_to_rgb,
     
 )
 from functions.physics import (
@@ -66,14 +71,16 @@ from functions.analysis import get_data, get_precision, get_sensitivity, get_f1_
 #############################
 from psychopy import core, event, visual
 
-def show_break(win, duration=10):
+def show_break(win, duration=10, button_order={"lighter": "m", "darker": "x"}):
+    longer_str = " longer" if duration > 10 else ""
+
     clock = core.Clock()
     countdown_text = visual.TextStim(win, text='', pos=(0, 0), height=20)
-    break_text = visual.TextStim(win, text='You deserve a break now. Press space if you disagree.', pos=(0, 50), height=30)
+    break_text = visual.TextStim(win, text=f'You deserve a{longer_str} break now.\n\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker\n\nPress space to continue.', pos=(0, 70), height=30)
     
     while clock.getTime() < duration:
         remaining_time = duration - int(clock.getTime())
-        countdown_text.text = f'Break ends in {remaining_time} seconds'
+        countdown_text.text = f'\n\n\n\n\n\nBreak ends in {remaining_time} seconds'
         countdown_text.draw()
         break_text.draw()
         win.flip()
@@ -116,13 +123,11 @@ verbose = config["verbose"]
 exp_parameters = config["exp_parameters"]
 feedback_freq = config["feedback_freq"]
 
-buttons = ["x", "m"]
+buttons = ["m", "x"]
 
-random.shuffle(buttons)
+# random.shuffle(buttons)
 
 button_order = {"lighter": buttons[0],  "darker": buttons[1]}
-
-
 
 exp_data = {par: [] for par in exp_parameters}
 
@@ -153,7 +158,7 @@ expInfo["date"] = data.getDateStr()  # add a simple timestamp
 expInfo["expName"] = expName
 expInfo["psychopyVersion"] = psychopyVersion
 
-from objects.deprecated.task_components_mac import (
+from objects.task_components import (
     win,
     ball,
     left_border,
@@ -169,7 +174,7 @@ from objects.deprecated.task_components_mac import (
     fixation,
     horizontal_lines,
     vertical_lines,    
-    occluder_square,
+    grating,
 )
 
 line_map = {
@@ -226,7 +231,7 @@ design_matrix = build_design_matrix(n_trials=n_trials, # Multiple of 160 for now
                                     change_ratio=[True],
                                     ball_color_change_mean=config["ball_color_change_mean"], 
                                     ball_color_change_sd=config["ball_color_change_sd"],
-                                    verbose=True)
+                                    verbose=True, neg_bias_factor=config["neg_bias_factor"])
 
 check_balance(design_matrix) if verbose else None
 
@@ -254,7 +259,7 @@ ball_spawn_spread = config[
 
 # Get ITI distribution based on randomly sampled truncated exponential decay
 decay_steepness = 1.0
-itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"], n_trials) # CHANGED THIS NOW (maandag 10MAART)
+itis = truncated_exponential_decay(config["min_iti"], config["max_iti"], n_trials) # CHANGED THIS NOW (maandag 10MAART)
 # itis = two_sided_truncated_exponential(config["mean_iti"], config["min_iti"], config["max_iti"], scale=decay_steepness, size=n_trials)
 
 # Generate a random ITI for each trial
@@ -267,20 +272,10 @@ itis = truncated_exponential_decay(config["min_iti"], config["truncation_cutoff"
 # INTRODUCE NOVEL PROBLEMS.
 
 # Define the start and end colors for the subtle hue change
-start_color = config["ball_fillcolor"]
+#start_color = ball_start_color # config["ball_fillcolor"]
 fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray (colour for fixation change)
 
 # occluder_color = np.array(config["ball_changecolor"], dtype=float)
-
-
-buttons = ["x", "m"]
-random.shuffle(buttons)
-
-button_order = {"lighter": buttons[0],  "darker": buttons[1]}
-
-# list(button_order.keys())[0] == "lighter"
-
-# list(button_order.values())[0] == "x"
 
 # **TASK SELECTION MENU**
 task_choice = None
@@ -308,9 +303,9 @@ explanation_text_speed = visual.TextStim(
     text=(
         "In this task, you will see a ball moving towards the\n"
         "center of the screen, where it passes behind a square.\n\n"
-        "On top of this square you'll see a small white cross: +  \n"
+        "On top of this square you'll see a small red cross: +  \n"
         "Keep your eyes focused on this cross during the whole trial.\n\n"
-        "In some trials, the ball changes colour behind the occluder \n\n"
+        "The ball changes colour when behind the occluder \n\n"
         "You are challenged to detect these changes.\n\n"
         f"If the ball becomes lighter, press {button_order['lighter']}\n"
         f"If the ball becomes darker, press {button_order['darker']}\n"
@@ -351,11 +346,17 @@ for trial_number, trial in enumerate(trials):
     
     ball_start_color = ball_start_colors[trial_number] # These are in single hue values, but grey tones are the same in RGB
     ball_color_change = ball_color_changes[trial_number]
-    changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
+    # changed_ball_color = [ball_start_color + ball_color_change] * 3 # Here turned into list of RGB values
+    changed_ball_color = oklab_to_rgb([(ball_start_color + ball_color_change), 0, 0], psychopy_rgb=True) # Here turned into list of RGB values
     
-    ball.color = ball_start_color # Not sure if this works
+    # start_color = ball_start_color # was config["ball_fillcolor"]
+    start_color = np.clip(ball_start_color, -1, 1)
+    # ball.color = ball_start_color # Not sure if this works
+    
+    ball.color = np.clip(oklab_to_rgb([ball_start_color, 0, 0], psychopy_rgb=True), -1, 1)
     
     ########### DRAW FIXATION CROSS ###########
+    # grating.draw()
     left_border.draw()
     right_border.draw()
     top_border.draw()
@@ -372,6 +373,7 @@ for trial_number, trial in enumerate(trials):
     right_border.draw()
     top_border.draw()
     bottom_border.draw()
+    # grating.draw()
     if trial[:-2] == "45_top":
         line_135_top.draw()
     elif trial[:-2] == "45_bottom":
@@ -393,7 +395,8 @@ for trial_number, trial in enumerate(trials):
     left_border.draw()
     right_border.draw()
     top_border.draw()
-    bottom_border.draw()    
+    bottom_border.draw()  
+    # grating.draw()  
     if trial[:-2] == "45_top":
         line_135_top.draw()
     elif trial[:-2] == "45_bottom":
@@ -404,7 +407,7 @@ for trial_number, trial in enumerate(trials):
         line_45_bottom.draw()
     # inner_outline.draw()
     occluder.draw()
-    occluder_square.draw()
+    # occluder_square.draw()
     
     
     if config["draw_grid"]:
@@ -561,6 +564,7 @@ for trial_number, trial in enumerate(trials):
             crossed_fixation = True
 
         # Draw on each frame
+        # grating.draw()
         ball.draw()
         left_border.draw()
         right_border.draw()
@@ -580,8 +584,7 @@ for trial_number, trial in enumerate(trials):
             for line in horizontal_lines + vertical_lines:
                 line.draw()
 
-        occluder.draw() # if occluder_opaque else occluder_glass.draw()
-        occluder_square.draw()
+        occluder.draw() 
         fixation.draw()
         
         win.flip()
@@ -635,12 +638,13 @@ for trial_number, trial in enumerate(trials):
         # USED TO BE ELIF, BUT SHOULDN'T MAKE SENSE
         # Check if ball is about to leave occluder
         if (
-            np.linalg.norm(ball.pos) > occluder_radius - (ball_radius * 2.0) # WAS 1.5!!!
+            # np.linalg.norm(ball.pos) > occluder_radius - (ball_radius * 2.0) # WAS 1.5!!!
+            np.linalg.norm(ball.pos) > (occluder_radius / 2) - (ball_radius * 2.0) # WAS 1.5!!!
             and crossed_fixation
             and not left_occluder
         ):  # Make sure to start counting after exiting the occluder
             print(f"occluder exit time: {trial_clock.getTime():.2f}")
-            occluder_exit_moment = trial_clock.getTime()
+            occluder_exit_moment = trial_clock.getTime() # So this is not really accurate, but more important that the ball visually doesn't change
             left_occluder = True
 
         # elif (
@@ -826,28 +830,58 @@ for trial_number, trial in enumerate(trials):
     if (trial_number + 1) % feedback_freq == 0: # and trial_number > 10:
         intermit_data = pd.DataFrame(exp_data)
         intermit_rt = np.mean(intermit_data["rt"].dropna())
-        feedback_text = f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: {button_order["lighter"]} for lighter, {button_order["darker"]} for darker'
+        feedback_text = f'Progress: {trial_number + 1}/{n_trials}\nDetected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\nAverage speed: {intermit_rt:.2f}s\n\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker'
         subject = expInfo["participant"]
         os.makedirs(f"{datadir}/{subject}", exist_ok=True)
         intermit_data.to_csv(f"{datadir}/{subject}/intermit_data.csv")
+
+        if (trial_number + 1) % (n_trials // 2) == 0 and (trial_number + 1 != n_trials):
+            # feedback_text = f'You are halfway through! An incredible job.\nHere is a 30s break\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker'
+
+            # Show the break with countdown
+            show_break(win, duration=30, button_order=button_order)
+
+            feedback = visual.TextStim(
+                win, text=feedback_text, color="white", pos=(0, 150), height=30
+            )
+            # grating.draw()
+            left_border.draw()
+            right_border.draw()
+            top_border.draw()
+            bottom_border.draw()
+            feedback.draw()
+            fixation.draw()
+            
+            win.flip()
+            # core.wait(config["feedback_time"])
+            core.wait(config["feedback_time"])
+
+            # core.wait(30)
+            
+        else:
+
+            # Show the break with countdown
+            show_break(win, duration=10, button_order=button_order)
+
+            feedback = visual.TextStim(
+                win, text=feedback_text, color="white", pos=(0, 150), height=30
+            )
         
-        # Show the break with countdown
-        show_break(win, duration=10)
+            left_border.draw()
+            right_border.draw()
+            top_border.draw()
+            bottom_border.draw()
+            feedback.draw()
+            fixation.draw()
+            
+            win.flip()
+            core.wait(config["feedback_time"])
+
+            
+        
     else:
         feedback_text = ""
 
-    feedback = visual.TextStim(
-        win, text=feedback_text, color="white", pos=(0, 100), height=30
-    )
-    left_border.draw()
-    right_border.draw()
-    top_border.draw()
-    bottom_border.draw()
-    feedback.draw()
-    fixation.draw()
-    
-    win.flip()
-    core.wait(config["feedback_time"])
 
     # Reset ball and fixation color to original after each trial # Don't need this I think
     # ball.fillColor = config["ball_fillcolor"]
@@ -877,7 +911,5 @@ save_performance_data(expInfo["participant"], task_name, design_matrix, design_m
 
 end_time = time.time()
 elapsed_time = end_time - start_time
-# Turn into very simple dataframe including the number of trials and time it took
 timing_df = pd.DataFrame({"n_trials": [n_trials], "time_elapsed": [elapsed_time]})
 timing_df.to_csv(f"{datadir}/{subject}/timing.csv")
-

@@ -176,70 +176,6 @@ def get_f1_score(df, hypothesis:str = "both", include_dubtrials=False, return_df
     
     return f1
 
-
-
-
-
-def get_specificity():
-    pass
-
-def get_confusion_matrix():
-    pass
-
-def get_roc_curve():
-    pass
-
-# def get_rt(df, hypothesis:str = "both", include_dubtrials:bool | str=False, return_df:bool=False, only_correct:bool=False):
-#     """Precision: True positives / (True positives + False negatives)
-#     Args:
-#         df (pd.dataframe): The data
-#         hypothesis (str): The hypothesis to test. Can be either "simulation", "abstraction" or "both"
-#         include_dubtrials (bool): Whether to include trials where both hypotheses are congruent
-#         return_df (bool): Whether to return the filtered DataFrame instead of the precision value
-    
-#     """
-    
-#     hypotheses_types = ["simulation", "abstraction"]
-#     hypotheses = hypotheses_types if hypothesis == "both" else [hypothesis]
-    
-#     df = df[df["accuracy"] == True] if only_correct else df
-    
-#     stat_dict = {}
-    
-#     if include_dubtrials == "only":
-#         hypothesis = "simulation"
-#         other_hypothesis = [h for h in hypotheses_types if h != hypothesis][0]
-#         target_trials = df[
-#             (df['ball_change'] == True) & # Only trials with a target
-#             (df['accuracy'] != None) & # Only trials with an accuracy value
-#             (df[hypothesis[:3] + '_congruent'] == True) & # Only trials congruent with the hypothesis
-#             (df[other_hypothesis[:3] + '_congruent'] == True) # Only trials congruent with the other hypothesis
-#         ]
-                        
-#         output = np.mean(target_trials['rt']) if not return_df else target_trials
-#         stat_dict["sim + abs"] = output
-        
-#     else:
-        
-#         for hypothesis in hypotheses:
-#             other_hypothesis = [h for h in hypotheses_types if h != hypothesis][0]
-#             target_trials = df[
-#                 (df['ball_change'] == True) & # Only trials with a target
-#                 (df['accuracy'] != None) & # Only trials with an accuracy value
-#                 (df[hypothesis[:3] + '_congruent'] == True) & # Only trials congruent with the hypothesis
-#                 (~df[other_hypothesis[:3] + '_congruent']) # Only trials incongruent with the other hypothesis
-#             ]
-#             if include_dubtrials:
-#                 target_trials = df[
-#                     (df['ball_change'] == True) & # Only trials with a target
-#                     (df['accuracy'] != None) & # Only trials with an accuracy value
-#                     (df[hypothesis[:3] + '_congruent'] == True)] # Only trials congruent with the hypothesis
-                    
-#             output = np.mean(target_trials['rt']) if not return_df else target_trials
-#             stat_dict[hypothesis] = output
-            
-#     return stat_dict
-
 def filter_condition(df:pd.DataFrame, sim_con:bool | None, expol_con:bool | None):
     """Filter the DataFrame based on the simulation and motion extrapolation congruence
 
@@ -280,29 +216,6 @@ def get_rt(df,
     output = np.mean(df_filtered['rt']) if not return_df else df_filtered
         
     return output
-
-
-
-# def get_precision(df, 
-#            sim_con:bool,
-#            expol_con:bool,
-#            return_df:bool=False):
-#     """Precision: True positives / (True positives + False negatives)
-#     Args:
-#         df (pd.dataframe): The data
-#         hypothesis (str): The hypothesis to test. Can be either "simulation", "abstraction" or "both"
-#         include_dubtrials (bool): Whether to include trials where both hypotheses are congruent
-#         return_df (bool): Whether to return the filtered DataFrame instead of the precision value
-    
-#     """        
-#     cond_filt_df = filter_condition(df, sim_con, expol_con)
-        
-#     df_filtered = df[(cond_filt_df['accuracy'].notnull()) & # If a response was given
-#                      (cond_filt_df['response'] != None)] # If a target was shown
-
-#     output = np.mean(df_filtered['accuracy']) if not return_df else df_filtered
-        
-#     return output
 
 def get_precision(df, sim_con, expol_con, return_df):
     """Precision: True positives / (True positives + False negatives)
