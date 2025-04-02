@@ -279,23 +279,29 @@ outer_cross_vertices = [
     (-occluder_radius / outer_cross_factor, -occluder_radius), (-occluder_radius / outer_cross_factor, -occluder_radius / outer_cross_factor)
 ]
 
-# Create the cross shape
-occluder = visual.ShapeStim(
+# Create the cross shape # NOT USED ANYMORE
+occluder_cross = visual.ShapeStim(
     win,
     vertices=cross_vertices,
-    fillColor=np.array(config["occluder_color"], dtype=float),
-    lineColor=np.array(config["occluder_color"], dtype=float),
+    # fillColor=np.array(config["occluder_color"], dtype=float),
+    # lineColor=np.array(config["occluder_color"], dtype=float),
+    fillColor=[.5, .25, -.5],
+    lineColor=[.5, .25, -.5],
     pos=(0, 0),
     opacity=occluder_opacity if occluder_type[:5] == "cross" else 0,
 )
 
 # Add opacity = .5 to make see-through
-occluder_square = visual.Rect(
+occluder = visual.Rect(
     win,
-    width=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
-    height=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
-    fillColor=np.array(config["occluder_color"], dtype=float),
-    lineColor=np.array(config["occluder_color"], dtype=float),
+    width=occluder_radius,
+    height=occluder_radius,
+    # width=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
+    # height=occluder_radius * 1.1 if occluder_type == "cross_smooth" else occluder_radius * 1.5,
+    # fillColor=np.array(config["occluder_color"], dtype=float),
+    # lineColor=np.array(config["occluder_color"], dtype=float),
+    fillColor=[-0.1, -0.51, -0.87],
+    lineColor=[-0.1, -0.51, -0.87],
     pos=(0, 0),
     opacity=occluder_opacity if occluder_type != "cross" else 0,
     ori=45 if occluder_type == "cross_smooth" else 0

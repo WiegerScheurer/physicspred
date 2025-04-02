@@ -174,7 +174,6 @@ from objects.task_components import (
     fixation,
     horizontal_lines,
     vertical_lines,    
-    occluder_square,
     grating,
 )
 
@@ -408,7 +407,7 @@ for trial_number, trial in enumerate(trials):
         line_45_bottom.draw()
     # inner_outline.draw()
     occluder.draw()
-    occluder_square.draw()
+    # occluder_square.draw()
     
     
     if config["draw_grid"]:
@@ -585,8 +584,7 @@ for trial_number, trial in enumerate(trials):
             for line in horizontal_lines + vertical_lines:
                 line.draw()
 
-        occluder.draw() # if occluder_opaque else occluder_glass.draw()
-        occluder_square.draw()
+        occluder.draw() 
         fixation.draw()
         
         win.flip()
@@ -640,12 +638,13 @@ for trial_number, trial in enumerate(trials):
         # USED TO BE ELIF, BUT SHOULDN'T MAKE SENSE
         # Check if ball is about to leave occluder
         if (
-            np.linalg.norm(ball.pos) > occluder_radius - (ball_radius * 2.0) # WAS 1.5!!!
+            # np.linalg.norm(ball.pos) > occluder_radius - (ball_radius * 2.0) # WAS 1.5!!!
+            np.linalg.norm(ball.pos) > (occluder_radius / 2) - (ball_radius * 2.0) # WAS 1.5!!!
             and crossed_fixation
             and not left_occluder
         ):  # Make sure to start counting after exiting the occluder
             print(f"occluder exit time: {trial_clock.getTime():.2f}")
-            occluder_exit_moment = trial_clock.getTime()
+            occluder_exit_moment = trial_clock.getTime() # So this is not really accurate, but more important that the ball visually doesn't change
             left_occluder = True
 
         # elif (
