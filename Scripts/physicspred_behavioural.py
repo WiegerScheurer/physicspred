@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import sys
 import time
+from omegaconf import OmegaConf
 
 # Add repository to path
 sys.path.append("/Users/wiegerscheurer/repos/physicspred")
@@ -40,14 +41,16 @@ from functions.physics import (
 from functions.analysis import get_hit_rate
 
 # Function for displaying breaks between trials
-def show_break(win, duration=10, button_order={"lighter": "m", "darker": "x"}):
+# TODO: Turn the m and x buttons into right and left, so that it works with buttonboxes
+# TODO: in the button boxes, they are a and e, lower case.
+def show_break(win, duration=10, button_order={"brighter": "m", "darker": "x"}):
     longer_str = " longer" if duration > 10 else ""
     
     clock = core.Clock()
     countdown_text = visual.TextStim(win, text='', pos=(0, 0), height=20)
     break_text = visual.TextStim(
         win, 
-        text=f'You deserve a{longer_str} break now.\n\nRemember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker\n\nPress space to continue.', 
+        text=f'You deserve a{longer_str} break now.\n\nRemember: \n{button_order["brighter"]} for brighter\n{button_order["darker"]} for darker\n\nPress space to continue.', 
         pos=(0, 70), 
         height=30
     )
@@ -68,27 +71,42 @@ def show_break(win, duration=10, button_order={"lighter": "m", "darker": "x"}):
 
 # Load configuration file
 config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config_lumin.yaml")
-with open(config_path, "r") as file:
-    config = yaml.safe_load(file)
+# with open(config_path, "r") as file:
+#     config = yaml.safe_load(file)
+config = OmegaConf.load(config_path)
 
 # Extract configuration parameters
-datadir = config["datadir"]
-win_dims = config['win_dims']
-avg_ball_speed = config["avg_ball_speed"]
-ball_radius = config["ball_radius"]
-interactor_height = config["interactor_height"]
-interactor_width = config["interactor_width"]
-occluder_radius = config["occluder_radius"]
-verbose = config["verbose"]
-exp_parameters = config["exp_parameters"]
-feedback_freq = config["feedback_freq"]
-n_trials = config["n_trials"]
-square_size = config["square_size"]
+# datadir = config["datadir"]
+datadir =           config.paths.datadir
+win_dims =          config.display.win_dims
+avg_ball_speed =    config.ball.avg_speed
+ball_radius =       config.ball.radius
+interactor_height = config.interactor.height    # Now nested under 'interactor'
+interactor_width =  config.interactor.width     # Now nested under 'interactor'
+occluder_radius =   config.occluder.radius       # Now nested under 'occluder'
+verbose =           config.experiment.verbose            # Now nested under 'experiment'
+exp_parameters =    config.experiment.exp_parameters
+feedback_freq =     config.experiment.feedback_freq
+n_trials =          config.experiment.n_trials
+square_size =       config.display.square_size 
+
+fixation_dur = config.timing.fixation_dur
+interactor_dur = config.timing.interactor_dur
+occluder_dur = config.timing.occluder_dur
+ballmov_dur = config.timing.ballmov_dur
+feedback_dur = config.timing.feedback_dur
+min_iti = config.timing.min_iti
+max_iti = config.timing.max_iti
+
+draw_grid = config.display.draw_grid
+decay_constant = config.ball.decay_constant
+frame_dur = config.display.frame_dur
+
 
 # Set up button mappings
 buttons = ["m", "x"]
 random.shuffle(buttons)
-button_order = {"lighter": buttons[0], "darker": buttons[1]}
+button_order = {"brighter": buttons[0], "darker": buttons[1]}
 
 # Initialize experiment data dictionary
 exp_data = {par: [] for par in exp_parameters}
@@ -114,8 +132,8 @@ if dlg.OK == False:
 # Add timestamp and experiment info
 expInfo["date"] = data.getDateStr()
 expInfo["expName"] = expName
-expInfo["psychopyVersion"] = config["psychopy_version"]
-give_feedback = True if expInfo["feedback"] == "Yes" else False
+expInfo["psychopyVersion"] = config.experiment.psychopy_version #config["psychopy_version"]
+give_feedback = True  #if expInfo["feedback"] == "Yes" else False # Remove this 
 
 # Import task components
 from objects.task_components import (
@@ -177,47 +195,74 @@ edge_options = ["up", "down", "left", "right"]
 design_matrix = build_design_matrix(
     n_trials=n_trials,
     change_ratio=[True],
-    ball_color_change_mean=config["ball_color_change_mean"],
-    ball_color_change_sd=config["ball_color_change_sd"],
+    ball_color_change_mean=config.ball.color_change_mean, #config["ball_color_change_mean"],
+    ball_color_change_sd=config.ball.color_change_sd, #config["ball_color_change_sd"],
     verbose=verbose,
-    neg_bias_factor=config["neg_bias_factor"]
+    neg_bias_factor=config.ball.neg_bias_factor, #config["neg_bias_factor"]
 )
 
 if verbose:
     check_balance(design_matrix)
-    print(f'Ball changes: {list(ordinal_sample(config["ball_color_change_mean"], config["ball_color_change_sd"], n_elements=5, round_decimals=3))}')
+    print(f'Ball changes: {list(ordinal_sample(config.ball.color_change_mean, config.ball.color_change_sd, n_elements=5, round_decimals=3))}')
 
 # Extract trial parameters from design matrix
-trial_types = list(design_matrix["trial_type"])
-trials = list(design_matrix["trial_option"])
-bounces = list(design_matrix["bounce"])
+trial_types =            list(design_matrix["trial_type"])
+trials =                 list(design_matrix["trial_option"])
+bounces =                list(design_matrix["bounce"])
 rand_bounce_directions = list(design_matrix["phant_bounce_direction"])
-ball_changes = list(design_matrix["ball_change"])
-ball_color_changes = list(design_matrix["ball_luminance"])
+ball_changes =           list(design_matrix["ball_change"])
+ball_color_changes =     list(design_matrix["ball_luminance"])
 
 # Generate ball speeds and starting colors
-ball_speeds = bellshape_sample(float(avg_ball_speed), float(config["natural_speed_variance"]), n_trials)
-ball_start_colors = bellshape_sample(float(config["ball_start_color_mean"]), float(config["ball_start_color_sd"]), n_trials)
-ball_spawn_spread = config["ball_spawn_spread"]
+ball_speeds = bellshape_sample(float(avg_ball_speed), float(config.ball.natural_speed_variance), n_trials)
+ball_start_colors = bellshape_sample(float(config.ball.start_color_mean), float(config.ball.start_color_sd), n_trials)
+ball_spawn_spread = config.ball.spawn_spread
 
 # Generate inter-trial intervals
-itis = truncated_exponential_decay(config["min_iti"], config["max_iti"], n_trials)
+itis = truncated_exponential_decay(min_iti, max_iti, n_trials)
 
-# Define fixation change color
-fixation_changecolor = np.array([0.75, 0.75, 0.75])  # Light gray
+# # Display welcome screen
+# welcome_text = visual.TextStim(
+#     win,
+#     text=f"Welcome! Today you will perform the Ball Hue task.\n\nPress 'Space' to continue.",
+#     color="white",
+#     pos=(0, 0),
+#     height=30,
+# )
 
-# Display welcome screen
+# instruction_read = ""
+# while instruction_read != "SPACE":
+#     welcome_text.draw()
+#     win.flip()
+#     instruction_read = event.waitKeys(keyList=["space"])[0].upper()
+
+
+# Create a background rectangle for the welcome text
+background_rect = visual.Rect(
+    win,
+    width=1.5,  # Adjust width as needed
+    height=0.5,  # Adjust height as needed
+    fillColor='black',
+    lineColor='black',
+    pos=(0, 0)
+)
+
+# Display welcome screen with enhanced styling
 welcome_text = visual.TextStim(
     win,
-    text=f"Welcome! Today you will perform the {expInfo['task']} task.\n\nPress 'Space' to continue.",
+    text="Welcome! Today you will perform the Ball Hue task.\n\nPress 'Space' to continue.",
     color="white",
     pos=(0, 0),
     height=30,
+    font='Arial',  # Use a different font if desired
+    bold=True,  # Make the text bold
+    wrapWidth=1.4  # Adjust wrap width to fit within the background rectangle
 )
 
 instruction_read = ""
 while instruction_read != "SPACE":
-    welcome_text.draw()
+    background_rect.draw()  # Draw the background rectangle
+    welcome_text.draw()  # Draw the welcome text
     win.flip()
     instruction_read = event.waitKeys(keyList=["space"])[0].upper()
 
@@ -231,10 +276,10 @@ explanation_text_speed = visual.TextStim(
         "Keep your eyes focused on this cross during the whole trial.\n\n"
         "The ball changes colour when behind the occluder \n\n"
         "You are challenged to detect these changes.\n\n"
-        f"If the ball becomes lighter, press {button_order['lighter']}\n"
+        f"If the ball becomes brighter, press {button_order['brighter']}\n"
         f"If the ball becomes darker, press {button_order['darker']}\n"
         "Be as fast and accurate as possible!\n\n\n"
-        f"We'll unveil your score every {config['feedback_freq']} trials.\n\n"
+        f"We'll unveil your score every {config.experiment.feedback_freq} trials.\n\n"
         "Press 'Space' to start."
     ),
     color="white",
@@ -263,9 +308,10 @@ for trial_number, trial in enumerate(trials):
     
     trial_clock = core.Clock()
     
+    # TODO: CHANGE THIS FUNCTION SO THAT IT ONLY DOES WHAT IT NEEDS TO DO FOR THE CURRENT VERSION
     # Get positions and directions for ball movement
     start_positions, directions, fast_directions, slow_directions, skip_directions, wait_directions = get_pos_and_dirs(
-        avg_ball_speed, square_size, ball_spawn_spread, config["ball_speed_change"], ball_radius
+        avg_ball_speed, square_size, ball_spawn_spread, config.ball.speed_change, ball_radius
     )
     
     # Set up ball color
@@ -282,23 +328,23 @@ for trial_number, trial in enumerate(trials):
     
     if verbose:
         print(f"Exact Fixation time: {trial_clock.getTime()}s")
-    core.wait(config["fixation_time"])
+    core.wait(fixation_dur)
     
     # INTERACTOR LINE DISPLAY
-    draw_screen_elements(trial, draw_grid=True)
+    draw_screen_elements(trial, draw_grid=draw_grid)
     win.flip()
     
     if verbose:
         print(f"Exact interactor time: {trial_clock.getTime()}s")
-    core.wait(config["interactor_time"])
+    core.wait(interactor_dur)
     
     # OCCLUDER DISPLAY
-    draw_screen_elements(trial, draw_occluder=True, draw_grid=True)
+    draw_screen_elements(trial, draw_occluder=True, draw_grid=draw_grid)
     win.flip()
     
     if verbose:
         print(f"Exact occluder time: {trial_clock.getTime()}s")
-    core.wait(config["occluder_time"])
+    core.wait(occluder_dur)
     
     # Extract start position letter from trial name
     if trial[:4] == "none":
@@ -345,14 +391,14 @@ for trial_number, trial in enumerate(trials):
     
     # Calculate trial duration
     trial_duration = (
-        config["fixation_time"] + 
-        config["interactor_time"] + 
-        config["occluder_time"] + 
-        config["ballmov_time"]
+        fixation_dur + 
+        interactor_dur + 
+        occluder_dur + 
+        ballmov_dur
     )
     
-    if verbose:
-        print(f"Trial duration = {trial_duration}s")
+    # if verbose:
+    print(f"Trial duration = {trial_duration}s")
     
     # Store trial characteristics
     trial_no = len(exp_data["trial"]) + 1
@@ -397,13 +443,13 @@ for trial_number, trial in enumerate(trials):
     while trial_clock.getTime() < trial_duration:
         # Apply ball speed decay
         decay_factor = calculate_decay_factor(
-            this_ball_speed, ballmov_time, trial_duration, constant=config["decay_constant"]
+            this_ball_speed, ballmov_time, trial_duration, constant=decay_constant
         )
         velocity = [velocity[0] * decay_factor, velocity[1] * decay_factor]
         ball.pos += tuple([velocity[0] * 1, velocity[1] * 1])  # Using skip_factor=1
         
         # Update elapsed time
-        ballmov_time += config["frame_rate"]
+        ballmov_time += frame_dur
         
         # Track when ball enters and leaves screen
         if (np.linalg.norm(ball.pos) > square_size / 2) and trial_clock.getTime() < (trial_duration // 2):
@@ -440,9 +486,9 @@ for trial_number, trial in enumerate(trials):
         
         # Draw the current frame
         ball.draw()
-        draw_screen_elements(trial, draw_occluder=True, draw_grid=config["draw_grid"])
+        draw_screen_elements(trial, draw_occluder=True, draw_grid=draw_grid)
         win.flip()
-        core.wait(config["frame_rate"])
+        core.wait(frame_dur) # This needs to be here to make the ball move at the right speed
         
         # Handle phantom bounce or fixation crossing
         if will_cross_fixation(ball.pos, velocity, 1):
@@ -507,7 +553,6 @@ for trial_number, trial in enumerate(trials):
         
         # Record ball direction and bounce moment
         ball_direction = velocity_to_direction(velocity)
-        # bounce_moment = bounce_moment
         exp_data["bounce_moment"][-1] = bounce_moment if _flip_dir(ball_direction) != edge else None
         exp_data["end_pos"][-1] = ball_direction
         
@@ -526,7 +571,6 @@ for trial_number, trial in enumerate(trials):
             # if not crossed_fixation:
             if not left_occluder:
                 print(f"Wrong, too early")
-                feedback_text = "Wrong, too early"
                 exp_data["response"][-1] = keys[0]
                 correct_response = None
                 responded = True
@@ -535,20 +579,21 @@ for trial_number, trial in enumerate(trials):
                 exp_data["response"][-1] = keys[0]
                 exp_data["rt"][-1] = toets_moment - ball_change_moment
                 
-                if ball_change and task_choice[0] == "B" and keys[0] in ["x", "m"]:
+                # if ball_change and task_choice[0] == "B" and keys[0] in ["x", "m"]:
+                if ball_change and keys[0] in ["x", "m"]:
                     hue_or_speed = "hue" if ball_change_type == "H" else "speed"
                     
-                    if keys[0] == button_order["lighter"]:
-                        this_response = "lighter"
+                    if keys[0] == button_order["brighter"]:
+                        this_response = "brighter"
                     elif keys[0] == button_order["darker"]:
                         this_response = "darker"
                     
-                    if (this_response == "lighter" and ball_color_change > 0) or (this_response == "darker" and ball_color_change < 0):
+                    if (this_response == "brighter" and ball_color_change > 0) or (this_response == "darker" and ball_color_change < 0):
                         print(f"Correct! detected a {this_response} ball in {round(toets_moment - ball_change_moment, 3)}s")
                         correct_response = True
                     elif ball_color_change == 0:
                         correct_response = None
-                    elif (this_response == "lighter" and ball_color_change < 0) or (this_response == "darker" and ball_color_change > 0):
+                    elif (this_response == "brighter" and ball_color_change < 0) or (this_response == "darker" and ball_color_change > 0):
                         print(f"Wrong answer, the ball didn't become {this_response}")
                         correct_response = False
                     
@@ -556,13 +601,11 @@ for trial_number, trial in enumerate(trials):
                     exp_data["rt"][-1] = toets_moment - ball_change_moment
                     
                     if toets_moment < ball_change_moment:
-                        feedback_text = "Responded too early"
                         print(f"Wrong, TOO EARLY")
                         correct_response = False
                 else:
                     if ball_change:
                         print(f"Wrong, there was no change")
-                        feedback_text = "Wrong, there was no change"
                         correct_response = False
                 
                 responded = True
@@ -603,7 +646,7 @@ for trial_number, trial in enumerate(trials):
             f'Progress: {trial_number + 1}/{n_trials}\n'
             f'Detected changes: {(get_hit_rate(intermit_data, sim_con=None, expol_con=None)*100):.2f}%\n'
             f'Average speed: {intermit_rt:.2f}s\n\n'
-            f'Remember: \n{button_order["lighter"]} for lighter\n{button_order["darker"]} for darker'
+            f'Remember: \n{button_order["brighter"]} for brighter\n{button_order["darker"]} for darker'
         )
         
         subject = expInfo["participant"]
@@ -620,7 +663,7 @@ for trial_number, trial in enumerate(trials):
             draw_screen_elements(None)
             feedback.draw()
             win.flip()
-            core.wait(config["feedback_time"])
+            core.wait(feedback_dur)
         else:
             # Regular break
             show_break(win, duration=10, button_order=button_order)
@@ -631,7 +674,7 @@ for trial_number, trial in enumerate(trials):
             draw_screen_elements(None)
             feedback.draw()
             win.flip()
-            core.wait(config["feedback_time"])
+            core.wait(feedback_dur)
     else:
         feedback_text = ""
 

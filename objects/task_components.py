@@ -5,6 +5,8 @@ import random
 import colour
 import numpy as np
 from psychopy import visual, gui, core, data, filters
+from omegaconf import OmegaConf
+
 
 
 sys.path.append(
@@ -16,29 +18,37 @@ from functions.utilities import oklab_to_rgb
 
 # Load configuration from YAML file
 config_path = os.path.join(os.path.dirname(__file__), os.pardir, "config_lumin.yaml")
-with open(config_path, "r") as file:
-    config = yaml.safe_load(file)
+config = OmegaConf.load(config_path)
 
-occluder_type = config["occluder_type"]  # "square" or "cross"
-# Access parameters from the config dictionary
-win_dims = config['win_dims']
-# ball_speed = config['ball_speed']
-ball_radius = config["ball_radius"]
-interactor_height = config["interactor_height"]
-interactor_width = config["interactor_width"]
-occluder_radius = config["occluder_radius"]
-verbose = config["verbose"]
-exp_parameters = config["exp_parameters"]
-square_size = config["square_size"]
-occluder_opacity = config["occluder_opacity"]
-background_luminance = config["background_luminance"]
+occluder_type = config.occluder.type
+win_dims = config.display.win_dims
+ball_radius = config.ball.radius
+# ball_speed = config.ball.avg_speed
+ball_start_color_mean = config.ball.start_color_mean
+interactor_height = config.interactor.height
+interactor_width = config.interactor.width
+int_45_path = config.paths.int_45
+int_135_path = config.paths.int_135
+
+occluder_radius = config.occluder.radius
+occluder_opacity = config.occluder.opacity
+background_luminance = config.display.background_luminance
+verbose = config.experiment.verbose
+square_size = config.display.square_size
+exp_parameters = config.experiment.exp_parameters
+full_screen = config.display.full_screen
+experiment_screen = config.display.experiment_screen
+draw_grid = config.display.draw_grid
+fixation_color = config.fixation.color
+fixation_length = config.fixation.length
+fixation_thickness = config.fixation.thickness
 
 exp_data = {par: [] for par in exp_parameters}
 
 win = visual.Window(
     size=win_dims,        # The size of the window in pixels (width, height).
-    fullscr=config["full_screen"],  # Whether to run in full-screen mode. Overrides size arg
-    screen=config["experiment_screen"],  # The screen number to display the window on (0 is usually the primary screen).
+    fullscr=full_screen,  # Whether to run in full-screen mode. Overrides size arg
+    screen=experiment_screen,  # The screen number to display the window on (0 is usually the primary screen).
     winType="pyglet",  # The backend to use for the window (e.g., 'pyglet', 'pygame').
     allowStencil=False,  # Whether to allow stencil buffer (used for advanced graphics).
     # monitor='testMonitor',    # The name of the monitor configuration to use (defined in the Monitor Center).
@@ -56,7 +66,7 @@ win = visual.Window(
 
 win_dims = win.size
 
-fixation = visual.TextStim(win, text="+", color=config["fixation_color"], pos=(0, 0), height=50)
+fixation = visual.TextStim(win, text="+", color=fixation_color, pos=(0, 0), height=50)
 
 # Create checkerboard pattern
 def create_checkerboard(size, check_size, light_color, dark_color):
@@ -69,7 +79,7 @@ def create_checkerboard(size, check_size, light_color, dark_color):
     return pattern
 
 # Set luminance values in Oklab space
-mean_ball_color = config["ball_start_color_mean"]
+mean_ball_color = ball_start_color_mean
 checker_light = oklab_to_rgb([mean_ball_color + 0.05, 0, 0])
 checker_dark = oklab_to_rgb([mean_ball_color - 0.05, 0, 0])
 
@@ -216,7 +226,7 @@ bounce_dist = get_bounce_dist(ball_radius + (interactor_width / 2 * 1.8)) # 1.8 
 line_45_bottom = visual.ImageStim(
     win,
     # image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_beige.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png",
+    image=int_45_path,
     size=(interactor_height, interactor_height),
     pos=(bounce_dist, -(bounce_dist)),
     opacity=1,
@@ -226,7 +236,7 @@ line_45_bottom = visual.ImageStim(
 line_45_top = visual.ImageStim(
     win,
     # image="/Users/wiegerscheurer/Stimulus_material/interactor_45_flat_white.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png",
+    image=int_45_path,
     size=(interactor_height, interactor_height),
     pos= (-(bounce_dist), bounce_dist),
     opacity=1,
@@ -236,7 +246,7 @@ line_45_top = visual.ImageStim(
 line_135_bottom = visual.ImageStim(
     win,
     # image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_white.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png",
+    image=int_135_path,
     size=(interactor_height, interactor_height),
     pos=(-bounce_dist, -(bounce_dist)),
     opacity=1,
@@ -246,7 +256,7 @@ line_135_bottom = visual.ImageStim(
 line_135_top = visual.ImageStim(
     win,
     # image="/Users/wiegerscheurer/Stimulus_material/interactor_135_flat_white.png", 
-    image="/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png",
+    image=int_135_path,
     size=(interactor_height, interactor_height),
     pos= ((bounce_dist), bounce_dist),
     opacity=1,
@@ -386,8 +396,8 @@ for i in range(-num_lines, num_lines + 1):
     vertical_lines.append(visual.Line(win, start=(x, -line_length / 2), end=(x, line_length / 2), lineWidth=line_width))
 
 # Define the length and thickness of the cross arms
-cross_length = config["fixation_length"]
-cross_thickness = config["fixation_thickness"]
+cross_length = fixation_length
+cross_thickness = fixation_thickness
 
 # Create the horizontal line of the cross
 horizontal_line = visual.ShapeStim(
@@ -395,7 +405,7 @@ horizontal_line = visual.ShapeStim(
     vertices=[(-cross_length / 2, 0), (cross_length / 2, 0)],
     lineWidth=cross_thickness,
     closeShape=False,
-    lineColor=config["fixation_color"]
+    lineColor=fixation_color
 )
 
 # Create the vertical line of the cross
@@ -404,7 +414,7 @@ vertical_line = visual.ShapeStim(
     vertices=[(0, -cross_length / 2), (0, cross_length / 2)],
     lineWidth=cross_thickness,
     closeShape=False,
-    lineColor=config["fixation_color"]
+    lineColor=fixation_color
 )
 
 # Draw the fixation cross by drawing both lines
@@ -431,7 +441,7 @@ def draw_screen_elements(trial, draw_occluder=False, draw_grid=False):
             line_45_bottom.draw()
     
     # Draw grid if enabled
-    if draw_grid and config["draw_grid"]:
+    if draw_grid:
         for line in horizontal_lines + vertical_lines:
             line.draw()
             

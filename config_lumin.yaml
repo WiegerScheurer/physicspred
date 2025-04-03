@@ -1,104 +1,124 @@
-datadir: "/Users/wiegerscheurer/repos/physicspred/data/"
-# datadir: "D:/Users/wiesch/physicspred-main/data/cubicle6"
-win_dims: [1920, 1080]
-# win_dims: [3840, 2160]
-# win_dims: [2560, 1440]
-avg_ball_speed: 9.5 # 6.5
-natural_speed_variance: .25 #.5
-# timing_factor: 0.75 # 3/4, because speed was 3 and is now 4,it should be 1 if speed is 3 ( Not needed I htink?)
-psychopy_version: "2024.2.4"
-ball_radius: 50
-# square_size: 1440 # The size of the square ball experiment screen (manually set now)
-square_size: 1080 # to work on my laptop for meeting
-interactor_height: 150
-interactor_width: 15
-occluder_radius: 360 #190 # had it at cross size 180 # Used to be 130 
-occluder_opacity: 1 #.5 # 1 is opaque, 0 is transparent
-occluder_color: [-1, -1, -1] #[-.55, -.55, -.55]
-occluder_type: "square" # or "cross" or "cross_smooth"
-feedback_freq: 5  # After how many trials there will be a feedback moment
-n_trials: 20
-verbose: false
-background_luminance: -.75 # this is same as ball start colour mean # DOESN'T WORK YET ADD TO OBJECTS FILE WIN
-neg_bias_factor: 1.4
+# ================
+# Experiment Setup
+# ================
 
-# These are all changed to Oklab color space (going from 0 to 1, rather than -1 to 1)
-ball_color_change_mean: 0 # used to be 0, and should still be, stupid
-ball_color_change_sd: .06 # Used to be .1675
+experiment:
+  name: "physicspred"
+  psychopy_version: "2024.2.4"
+  n_trials: 20
+  feedback_freq: 5          # Trials between feedback moments
+  target_baserate: 0.5      # Frequency of target trials (1:1 ratio)
+  verbose: false
+  exp_parameters:          # Parameters to record per trial
+    - trial_type
+    - trial
+    - ball_speed
+    - ball_start_color
+    - ball_color_change
+    - interactor
+    - bounce
+    - bounce_moment
+    - random_bounce_direction
+    - target_onset
+    - ball_change
+    - target_color
+    - abs_congruent
+    - sim_congruent
+    - response
+    - accuracy
+    - rt
+    - start_pos
+    - end_pos
+    - abs_rfup
+    - abs_rfright
+    - abs_rfdown
+    - abs_rfleft
+    - sim_rfup
+    - sim_rfright
+    - sim_rfdown
+    - sim_rfleft
 
-ball_start_color_mean: .8 #.575 # Used to be .15
-ball_start_color_sd: .05 #.08 # Used to be .175
+# =============
+# File Paths
+# =============
+paths:
+  datadir: "/Users/wiegerscheurer/repos/physicspred/data/"
+  int_45: "/Users/wiegerscheurer/repos/physicspred/objects/interactor_45_flat_white.png"
+  int_135: "/Users/wiegerscheurer/repos/physicspred/objects/interactor_135_flat_white.png"
+  # datadir: "D:/Users/wiesch/physicspred-main/data/cubicle6"
 
-# Ball change colour
-ball_changecolor: [.45, .45, .7]
-# fixation_color: "black"
-fixation_color: [1.0, 0.0, -1.0] #"red"
-fixation_length: 30
-fixation_thickness: 8
+# =============
+# Display Settings
+# =============
+display:
+  win_dims: [1920, 1080]   # Window dimensions
+  # win_dims: [3840, 2160]
+  # win_dims: [2560, 1440]
+  experiment_screen: 1     # 0=main, 1=second screen
+  full_screen: false
+  draw_grid: false
+  background_luminance: -0.75
+  frame_dur: 0.00833333333 # ~120Hz (1/120) time of a single frame
+  square_size: 1080        # Size of square experiment screen
+  # square_size: 1440
 
-# Ball speed change parameters:
-ball_speed_change: 1.2
-ball_spawn_spread: 1.4 # was 1.8 # smaller is more spread (I think)
-decay_constant: 0.0022
+# =============
+# Timing Parameters
+# =============
+timing:
+  fixation_dur: 0.5
+  interactor_dur: 1.25
+  occluder_dur: 0.75
+  ballmov_dur: 3          # Ball movement duration
+  feedback_dur: 2
+  mean_iti: 0.5            # Inter-trial interval
+  min_iti: 0.5
+  max_iti: 1.5
+  # hue_change_dur: 2
+  # ball_change_dur: 0.475
+  tr: 0.450                # fMRI parameters based on Ekman paper
+  te: 0.039
+  truncation_cutoff: 4
 
-# Fixation task parameters:
-hue_change_duration: 2
-ball_change_duration: .475 #.45
+# =============
+# Ball Properties
+# =============
+ball:
+  radius: 50
+  avg_speed: 9.5                # Average speed
+  natural_speed_variance: 0.25
+  speed_change: 1.2             # For speed change trials # TODO: REMOVE THIS!!!!!!!
+  spawn_spread: 1.4             # Smaller = more spread
+  decay_constant: 0.0022        # Decay constant for realistic speed slowdown
+  
+  # Color properties (Oklab color space 0-1 for (L)uminance)
+  start_color_mean: 0.8
+  start_color_sd: 0.05
+  color_change_mean: 0
+  color_change_sd: 0.06
+  change_color: [0.45, 0.45, 0.7] # Not currently used?
+  neg_bias_factor: 1.4
 
-# Ball hiccup task parameters:
-# slow_bounce_skip_factor: 1.6
-# fast_bounce_skip_factor: 2.0
+# =============
+# Interactor Properties
+# =============
+interactor:
+  height: 150
+  width: 15
 
-# Screen parameters:
-experiment_screen: 1 # 0 is the main screen, 1 is the second screen
-full_screen: false
-draw_grid: false
+# =============
+# Occluder Properties
+# =============
+occluder:
+  radius: 360
+  opacity: 1               # 1 = opaque, 0 = transparent
+  color: "#764A15" #"#996633"         # Brown color
+  type: "square"           # Options: "square", "cross", "cross_smooth"
 
-# fMRI parameters (current values based on Ekman paper)
-tr: .450
-te: .039s
-truncation_cutoff: 4
-
-# Task parameters:
-target_baserate: .5 #.25 # Frequency of target trials. 1 means 1:0, .25 is 1:3, or 25% target trials, etc. 
-
-# Timing parameters:
-# frame_rate: 0.016666666666 #0.01 is about 75 Hz 66666 # 60 Hz; 1/60
-frame_rate: 0.00833333333 # perhaps 120Hz then? 1/120
-fixation_time: .5
-interactor_time: 1.25
-occluder_time: .75 #.75
-ballmov_time: 3 # 4.5 #4.2222 #7
-feedback_time: 2
-mean_iti: .5
-min_iti: .5
-max_iti: 1.5
-
-exp_parameters:
-  - trial_type
-  - trial
-  - ball_speed
-  - ball_start_color
-  - ball_color_change
-  - interactor
-  - bounce
-  - bounce_moment
-  - random_bounce_direction
-  - target_onset
-  - ball_change
-  - target_color
-  - abs_congruent
-  - sim_congruent
-  - response
-  - accuracy
-  - rt
-  - start_pos
-  - end_pos
-  - abs_rfup
-  - abs_rfright
-  - abs_rfdown
-  - abs_rfleft
-  - sim_rfup
-  - sim_rfright
-  - sim_rfdown
-  - sim_rfleft
+# =============
+# Fixation Properties
+# =============
+fixation:
+  color: "#33CC00"         # Greenish color
+  length: 30
+  thickness: 8

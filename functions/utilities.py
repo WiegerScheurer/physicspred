@@ -75,28 +75,28 @@ def michelson_contrast(l_max:float, l_min:float):
 
 def equal_contrasts(darker_object:float, startlum_light_obj:float, light_increase:float, delta_lum:bool=False):
     """Function to compute how much darker a light object on a dark background needs to become to
-    match the difference in contrast with background of the original object becoming lighter. 
+    match the difference in contrast with background of the original object becoming brighter. 
 
     Assuming that the ball cannot become darker than the background, the function computes the luminance of the
     If it does, return an error (but implement still)
     Args:
         darker_object (float): The luminance of the darker object, such as the background
-        startlum_light_obj (float): The start luminance of the lighter object
-        light_increase (float): The increase in luminance of the lighter object
+        startlum_light_obj (float): The start luminance of the brighter object
+        light_increase (float): The increase in luminance of the brighter object
 
     Returns:
-        float: The luminance of the darker object that would match the contrast difference of the lighter object
+        float: The luminance of the darker object that would match the contrast difference of the brighter object
     """
 
     start_contrast = michelson_contrast(startlum_light_obj, darker_object)
     
-    lighter_obj = startlum_light_obj + light_increase # Think about whether this is sensible (not adaptive valence?)
+    brighter_obj = startlum_light_obj + light_increase # Think about whether this is sensible (not adaptive valence?)
     
-    lighter_contrast = michelson_contrast(lighter_obj, darker_object)
+    brighter_contrast = michelson_contrast(brighter_obj, darker_object)
     
-    lighter_contrast_diff = lighter_contrast - start_contrast
+    brighter_contrast_diff = brighter_contrast - start_contrast
     
-    darker_contrast = start_contrast - lighter_contrast_diff
+    darker_contrast = start_contrast - brighter_contrast_diff
     
     darker_ball_lum = darker_object * ((1 + darker_contrast) / (1 - darker_contrast))
     
@@ -146,7 +146,7 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
     # ball_change_options = [True, False]
     ball_change_options = change_ratio
     
-    # Strangely enough it appears that darker balls should be less extreme than lighter balls. 
+    # Strangely enough it appears that darker balls should be less extreme than brighter balls. 
     
     ball_color_change_options = list(ordinal_sample(ball_color_change_mean, ball_color_change_sd, n_elements=5, round_decimals=3,
                                      pos_bias_factor=1.0, neg_bias_factor=neg_bias_factor))
@@ -380,7 +380,9 @@ def create_balanced_trial_design(trial_n=None, change_ratio:list = [True, False]
         return _clean_trial_options(df)
             
         # return output_df.sample(frac=1).reset_index(drop=True)
-        
+# TODO: ADAPT SO THAT THE DARKER BALLS ARE NOT SO EXTREME AND THETHE LIGHTER BALLS ARE A TINY BIT MORE EXTREME. 
+# ALSO CHECK IF THIS EMPIRICAL FINDING BASED ON 1 SINGLE PILOT PARTICIPANTS ALIGNS WITH WHAT IS KNOWN ABOUT THE
+# NONLINEARITY OF THE LUMINANCE FUNCTION.
 def build_design_matrix(n_trials:int, change_ratio:list=[True, False], 
                         ball_color_change_mean:float=.45, ball_color_change_sd:float=.05, 
                         trials_per_fullmx:int | None=None, verbose:bool=False,
