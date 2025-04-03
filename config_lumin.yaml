@@ -57,7 +57,7 @@ display:
   experiment_screen: 1     # 0=main, 1=second screen
   full_screen: false
   draw_grid: false
-  background_luminance: -0.75
+  background_luminance: -0.6 # was -0.75
   frame_dur: 0.00833333333 # ~120Hz (1/120) time of a single frame
   square_size: 1080        # Size of square experiment screen
   # square_size: 1440
